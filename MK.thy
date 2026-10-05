@@ -1,0 +1,218 @@
+theory MK
+imports FOL
+begin
+
+typedecl i
+instance i :: "term" ..
+
+axiomatization
+  mem :: "[i, i] \<Rightarrow> o" (infixl \<open>\<in>\<close> 50)
+and
+  ClassAbs :: "(i \<Rightarrow> o) \<Rightarrow> i"
+
+abbreviation Set :: "i \<Rightarrow> o"
+  where "Set(x) \<equiv> \<exists> A. x \<in> A"
+
+axiomatization
+where
+  comprehension: "x \<in> ClassAbs(P) \<longleftrightarrow> Set(x) \<and> P(x)"
+
+syntax
+  "_ClassAbs" :: "[pttrn, o] \<Rightarrow> i"
+    ("(\<open>indent=1 notation=\<open>mixfix class comprehension\<close>\<close>{_ |/ _})")
+
+syntax_consts
+  "_ClassAbs" \<rightleftharpoons> ClassAbs
+
+translations
+  "{x | P}" \<rightleftharpoons> "CONST ClassAbs (\<lambda>x. P)"
+
+syntax
+  "_ClassAbsIn" :: "[pttrn, i, o] \<Rightarrow> i"
+    ("(1{_ \<in> _ |/ _})")
+
+syntax_consts
+  "_ClassAbsIn" \<rightleftharpoons> ClassAbs
+
+translations
+  "{x \<in> A | P}" \<rightharpoonup> "{x | x \<in> A \<and> P}"
+
+text \<open>
+  The syntax category \<open>args\<close> is inherited from Pure and represents
+  a nonempty comma-separated list of terms. Enumeration expands directly to
+  class comprehension: \<open>{a, b, c}\<close> means
+  \<open>{x | x = a \<or> x = b \<or> x = c}\<close>, with a fresh bound variable.
+\<close>
+
+syntax
+  "_FinSet" :: "args \<Rightarrow> i" (\<open>(\<open>indent=1 notation=\<open>mixfix set enumeration\<close>\<close>{_})\<close>)
+
+syntax_consts
+  "_FinSet" \<rightleftharpoons> ClassAbs
+
+text \<open>
+  Replacement binds a space-separated list in both the expression and the
+  predicate: \<open>{t | x y. P}\<close> expands to
+  \<open>{a | \<exists>x y. P \<and> a = t}\<close>.
+  The output variable is introduced as a bound
+  index, rather than a named variable, to avoid capturing free variables.
+\<close>
+
+syntax
+  "_ClassReplace" :: "[i, idts, o] \<Rightarrow> i"
+    ("(1{_ |/_./ _})")
+
+syntax_consts
+  "_ClassReplace" \<rightleftharpoons> ClassAbs
+
+parse_translation \<open>
+  let
+    val ex_tr = snd (Syntax_Trans.mk_binder_tr ("EX ", \<^const_syntax>\<open>Ex\<close>));
+
+    fun nvars (Const (\<^syntax_const>\<open>_idts\<close>, _) $ _ $ xs) = nvars xs + 1
+      | nvars _ = 1;
+
+    (* Lift existing loose indices before adding the ClassAbs abstraction. *)
+    fun enum_eq t =
+      Syntax.const \<^const_syntax>\<open>IFOL.eq\<close> $ Bound 0 $ incr_boundvars 1 t;
+
+    fun enum_body (Const (\<^syntax_const>\<open>_args\<close>, _) $ t $ ts) =
+          Syntax.const \<^const_syntax>\<open>IFOL.disj\<close> $ enum_eq t $ enum_body ts
+      | enum_body t = enum_eq t;
+
+    fun enumeration_tr _ [ts] =
+          Syntax.const \<^const_syntax>\<open>ClassAbs\<close> $ absdummy dummyT (enum_body ts)
+      | enumeration_tr _ ts = raise TERM ("class enumeration", ts);
+
+    fun replacement_tr ctxt [t, idts, P] =
+          let
+            val n = nvars idts;
+            (* Inside n existential binders, Bound n refers to the outer
+               ClassAbs binder. mk_binder_tr abstracts idts in both t and P. *)
+            val eq = Syntax.const \<^const_syntax>\<open>IFOL.eq\<close> $ Bound n $ t;
+            val body = Syntax.const \<^const_syntax>\<open>IFOL.conj\<close> $ P $ eq;
+          in Syntax.const \<^const_syntax>\<open>ClassAbs\<close> $
+            absdummy dummyT (ex_tr ctxt [idts, body]) end
+      | replacement_tr _ ts = raise TERM ("class replacement", ts);
+  in
+    [(\<^syntax_const>\<open>_FinSet\<close>, enumeration_tr),
+     (\<^syntax_const>\<open>_ClassReplace\<close>, replacement_tr)]
+  end
+\<close>
+
+print_translation \<open>
+  let
+    val ex_tr' = snd (Syntax_Trans.mk_binder_tr' (\<^const_syntax>\<open>Ex\<close>, "DUMMY"));
+
+    (* Remove the ClassAbs binder only when no entry depends on it. *)
+    fun enum_entry (Const (\<^const_syntax>\<open>IFOL.eq\<close>, _) $ Bound 0 $ t) =
+          if loose_bvar1 (t, 0) then raise Match else incr_boundvars ~1 t
+      | enum_entry _ = raise Match;
+
+    fun enum_entries (Const (\<^const_syntax>\<open>IFOL.disj\<close>, _) $ P $ Q) =
+          enum_entry P :: enum_entries Q
+      | enum_entries P = [enum_entry P];
+
+    fun enum_args [t] = t
+      | enum_args (t :: ts) = Syntax.const \<^syntax_const>\<open>_args\<close> $ t $ enum_args ts
+      | enum_args [] = raise Match;
+
+    (* The hidden output variable must occur only on the left of the equality. *)
+    fun check (Const (\<^const_syntax>\<open>Ex\<close>, _) $ Abs (_, _, body), n) =
+          check (body, n + 1)
+      | check (Const (\<^const_syntax>\<open>IFOL.conj\<close>, _) $ P $
+          (Const (\<^const_syntax>\<open>IFOL.eq\<close>, _) $ Bound m $ t), n) =
+          n > 0 andalso m = n andalso
+          not (loose_bvar1 (P, n)) andalso not (loose_bvar1 (t, n))
+      | check _ = false;
+
+    fun class_tr' ctxt [Abs (abs as (_, _, body))] =
+          (Syntax.const \<^syntax_const>\<open>_FinSet\<close> $ enum_args (enum_entries body)
+          handle Match => if check (body, 0) then
+            let
+              val _ $ ex_abs = body;
+              val _ $ idts $ (_ $ P $ (_ $ _ $ t)) = ex_tr' ctxt [ex_abs];
+            in Syntax.const \<^syntax_const>\<open>_ClassReplace\<close> $ t $ idts $ P end
+          else
+            let
+              val (x as _ $ Free (xN, _), P) = Syntax_Trans.atomic_abs_tr' ctxt abs;
+              val plain = Syntax.const \<^syntax_const>\<open>_ClassAbs\<close> $ x $ P;
+            in
+              case P of
+                Const (\<^const_syntax>\<open>IFOL.conj\<close>, _) $
+                  (Const (\<^const_syntax>\<open>mem\<close>, _) $
+                    (Const (\<^syntax_const>\<open>_bound\<close>, _) $ Free (yN, _)) $ A) $ Q =>
+                  if xN = yN andalso
+                    not (Term.exists_subterm (fn Free (z, _) => z = xN | _ => false) A)
+                  then Syntax.const \<^syntax_const>\<open>_ClassAbsIn\<close> $ x $ A $ Q
+                  else plain
+              | _ => plain
+            end)
+      | class_tr' _ _ = raise Match;
+  in [(\<^const_syntax>\<open>ClassAbs\<close>, class_tr')] end
+\<close>
+
+definition Ball :: "[i, i \<Rightarrow> o] \<Rightarrow> o"
+  where
+    "Ball(A, P) \<equiv> \<forall> x. x \<in> A \<longrightarrow> P(x)"
+
+definition Bexist :: "[i, i \<Rightarrow> o] \<Rightarrow> o"
+  where
+    "Bexist(A, P) \<equiv> \<exists> x. x \<in> A \<and> P(x)"
+
+syntax
+  "_Ball" :: "[pttrn, i, o] \<Rightarrow> o" (\<open>(\<open>indent=3 notation=\<open>binder \<forall>\<in>\<close>\<close>\<forall>_\<in>_./ _)\<close> 10)
+  "_Bexist" :: "[pttrn, i, o] \<Rightarrow> o" (\<open>(\<open>indent=3 notation=\<open>binder \<exists>\<in>\<close>\<close>\<exists>_\<in>_./ _)\<close> 10)
+
+syntax_consts
+  "_Ball" \<rightleftharpoons> Ball
+and
+  "_Bexist" \<rightleftharpoons> Bexist
+
+translations
+  "\<forall>x \<in> A. P" \<rightleftharpoons> "CONST Ball(A, \<lambda>x. P)"
+  "\<exists>x \<in> A. P" \<rightleftharpoons> "CONST Bexist(A, \<lambda>x. P)"
+
+definition insert :: "[i, i] \<Rightarrow> i"
+  where
+    "insert(a, B) \<equiv> {x | x = a \<or> x \<in> B}"
+
+abbreviation not_mem :: "[i, i] \<Rightarrow> o"  (infixl \<open>\<notin>\<close> 50)
+  where 
+    "A \<notin> B \<equiv> \<not> (A \<in> B)"
+
+abbreviation subset :: "[i, i] \<Rightarrow> o" (infixl \<open>\<subseteq>\<close> 50)
+  where
+    "A \<subseteq> B \<equiv> \<forall> x. x \<in> A \<longrightarrow> x \<in> B"
+
+abbreviation empty :: "i" (\<open>\<emptyset>\<close>)
+  where
+    "\<emptyset> \<equiv> {x | False}"
+
+notation (input) empty ("{}")
+
+abbreviation universe :: "i" (\<open>\<bbbV>\<close>)
+  where
+    "\<bbbV> \<equiv> {x | True}"
+
+definition inter :: "[i, i] \<Rightarrow> i" (infixl \<open>\<inter>\<close> 45)
+  where
+    "A \<inter> B \<equiv> {x | x \<in> A \<and> x \<in> B }"
+
+definition union :: "[i, i] \<Rightarrow> i" (infixl \<open>\<union>\<close> 44)
+  where
+    "A \<union> B \<equiv> {x | x \<in> A \<or> x \<in> B }"
+
+definition power :: "i \<Rightarrow> i" (\<open>\<P>\<close>)
+  where
+    "\<P>(x) \<equiv> {y | y \<subseteq> x}"
+
+definition successor :: "i \<Rightarrow> i" (\<open>S\<close>)
+  where
+    "S(x) \<equiv> x \<union> {x}"
+
+axiomatization
+where
+   extensionality: "A = B \<longleftrightarrow> (\<forall> C. C \<in> A \<longleftrightarrow> C \<in> B)"
+
+end
