@@ -1,5 +1,5 @@
 theory MK
-imports FOL
+  imports FOL
 begin
 
 typedecl i
@@ -173,6 +173,21 @@ translations
   "\<forall>x \<in> A. P" \<rightleftharpoons> "CONST Ball(A, \<lambda>x. P)"
   "\<exists>x \<in> A. P" \<rightleftharpoons> "CONST Bexist(A, \<lambda>x. P)"
 
+syntax
+  "_Sall" :: "[pttrn, o] \<Rightarrow> o"
+    (\<open>(\<open>indent=3 notation=\<open>binder \<forall>Set\<close>\<close>\<forall>Set'(_')./ _)\<close> 10)
+  "_Sexist" :: "[pttrn, o] \<Rightarrow> o"
+    (\<open>(\<open>indent=3 notation=\<open>binder \<exists>Set\<close>\<close>\<exists>Set'(_')./ _)\<close> 10)
+
+syntax_consts
+  "_Sall" \<rightleftharpoons> All
+and
+  "_Sexist" \<rightleftharpoons> Ex
+
+translations
+  "\<forall>Set(x). P" \<rightharpoonup> "\<forall>x. CONST Set(x) \<longrightarrow> P"
+  "\<exists>Set(x). P" \<rightharpoonup> "\<exists>x. CONST Set(x) \<and> P"
+
 definition insert :: "[i, i] \<Rightarrow> i"
   where
     "insert(a, B) \<equiv> {x | x = a \<or> x \<in> B}"
@@ -203,6 +218,14 @@ definition union :: "[i, i] \<Rightarrow> i" (infixl \<open>\<union>\<close> 44)
   where
     "A \<union> B \<equiv> {x | x \<in> A \<or> x \<in> B }"
 
+definition Inter :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<open>prefix \<Inter>\<close>\<close>\<Inter>_)\<close> [90] 90)
+  where
+    "\<Inter> A = {x | \<forall> a \<in> A. x \<in> a}"
+
+definition Union :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<open>prefix \<Union>\<close>\<close>\<Union>_)\<close> [90] 90)
+  where
+    "\<Union> A = {x | \<exists> a \<in> A. x \<in> a}"
+
 definition power :: "i \<Rightarrow> i" (\<open>\<P>\<close>)
   where
     "\<P>(x) \<equiv> {y | y \<subseteq> x}"
@@ -211,8 +234,48 @@ definition successor :: "i \<Rightarrow> i" (\<open>S\<close>)
   where
     "S(x) \<equiv> x \<union> {x}"
 
+definition pair :: "[i, i] \<Rightarrow> i" (\<open>(\<open>notation=\<open>mixfix pair\<close>\<close> \<langle>_,_\<rangle>)\<close> 90)
+  where
+    "\<langle>a, b\<rangle> \<equiv> {{a}, {a, b}}"
+
+section \<open>functions and relations\<close>
+
+definition Pair :: "i \<Rightarrow> o"
+  where
+    "Pair(A) \<equiv> \<exists>b c. A = \<langle>b, c\<rangle>"
+
+definition Rel :: "i \<Rightarrow> o"
+  where
+    "Rel(R) \<equiv> \<forall>p. p \<in> R \<longrightarrow> Pair(p)"
+
+definition Fun :: "i \<Rightarrow> o"
+  where
+    "Fun(F) \<equiv> Rel(F) \<and> (\<forall>x y z. \<langle>x,y\<rangle> \<in> F \<and> \<langle>x,z\<rangle> \<in> F \<longrightarrow> y = z)"
+
+definition dom :: "i \<Rightarrow> i"
+  where
+    "dom(R) \<equiv> {x | \<exists>y. \<langle>x, y\<rangle> \<in> R}"
+
+definition rng :: "i \<Rightarrow> i"
+  where
+    "rng(R) \<equiv> {y | \<exists>x. \<langle>x, y\<rangle> \<in> R}"
+
 axiomatization
 where
-   extensionality: "A = B \<longleftrightarrow> (\<forall> C. C \<in> A \<longleftrightarrow> C \<in> B)"
+  extensionality: "A = B \<longleftrightarrow> (\<forall> C. C \<in> A \<longleftrightarrow> C \<in> B)"
+and
+  power_set: "Set(x) \<Longrightarrow> \<exists>Set(y). y = \<P>(x)"
+and
+  pairing: "\<lbrakk>Set(x); Set(y)\<rbrakk> \<Longrightarrow> \<exists>Set(a). a = {x, y}"
+and
+  union: "Set(x) \<Longrightarrow> \<exists>Set(y). \<Union>x \<subseteq> y"
+and
+  foundation: "X \<noteq> {} \<Longrightarrow> \<exists>a \<in> X. \<forall>b \<in> X. b \<notin> a"
+and
+  infinity: "\<exists>Set(N). {} \<in> N \<and> (\<forall>n \<in> N. S(n) \<in> N)"
+and
+  replacement: "\<forall>F. Fun(F) \<and> Set(dom(F)) \<longrightarrow> Set(rng(F))"
+and
+  global_choice: "\<forall>R. Rel(R) \<longrightarrow> (\<exists>F. Fun(F) \<and> F \<subseteq> R \<and> dom(F) = dom(R))"
 
 end
