@@ -10,8 +10,11 @@ axiomatization
 and
   ClassAbs :: "(i \<Rightarrow> o) \<Rightarrow> i"
 
-abbreviation Set :: "i \<Rightarrow> o"
+definition Set :: "i \<Rightarrow> o"
   where "Set(x) \<equiv> \<exists> A. x \<in> A"
+
+lemma mem_imp_Set: "x \<in> A \<Longrightarrow> Set(x)"
+  unfolding Set_def by blast
 
 axiomatization
 where
@@ -26,6 +29,9 @@ syntax_consts
 
 translations
   "{x | P}" \<rightleftharpoons> "CONST ClassAbs (\<lambda>x. P)"
+
+lemma mem_classAbs [simp]: "x \<in> {x | P(x)} \<longleftrightarrow> Set(x) \<and> P(x)"
+  by (rule comprehension)
 
 syntax
   "_ClassAbsIn" :: "[pttrn, i, o] \<Rightarrow> i"
@@ -196,7 +202,7 @@ abbreviation not_mem :: "[i, i] \<Rightarrow> o"  (infixl \<open>\<notin>\<close
   where 
     "A \<notin> B \<equiv> \<not> (A \<in> B)"
 
-abbreviation subset :: "[i, i] \<Rightarrow> o" (infixl \<open>\<subseteq>\<close> 50)
+definition subset :: "[i, i] \<Rightarrow> o" (infixl \<open>\<subseteq>\<close> 50)
   where
     "A \<subseteq> B \<equiv> \<forall> x. x \<in> A \<longrightarrow> x \<in> B"
 
@@ -242,7 +248,7 @@ section \<open>functions and relations\<close>
 
 definition Pair :: "i \<Rightarrow> o"
   where
-    "Pair(A) \<equiv> \<exists>b c. A = \<langle>b, c\<rangle>"
+    "Pair(A) \<equiv> \<exists>Set(b). \<exists>Set(c). A = \<langle>b, c\<rangle>"
 
 definition Rel :: "i \<Rightarrow> o"
   where
@@ -274,8 +280,8 @@ and
 and
   infinity: "\<exists>Set(N). {} \<in> N \<and> (\<forall>n \<in> N. S(n) \<in> N)"
 and
-  replacement: "\<forall>F. Fun(F) \<and> Set(dom(F)) \<longrightarrow> Set(rng(F))"
+  replacement: "\<lbrakk>Fun(F); Set(dom(F))\<rbrakk> \<Longrightarrow> Set(rng(F))"
 and
-  global_choice: "\<forall>R. Rel(R) \<longrightarrow> (\<exists>F. Fun(F) \<and> F \<subseteq> R \<and> dom(F) = dom(R))"
+  global_choice: "Rel(R) \<Longrightarrow> \<exists>F. Fun(F) \<and> F \<subseteq> R \<and> dom(F) = dom(R)"
 
 end
