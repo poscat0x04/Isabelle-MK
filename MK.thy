@@ -11,7 +11,12 @@ and
   ClassAbs :: "(i \<Rightarrow> o) \<Rightarrow> i"
 
 definition Set :: "i \<Rightarrow> o"
-  where "Set(x) \<equiv> \<exists> A. x \<in> A"
+  where
+    "Set(x) \<equiv> \<exists>A. x \<in> A"
+
+definition PClass :: "i \<Rightarrow> o"
+  where
+    "PClass(x) \<equiv> \<not>Set(x)"
 
 lemma mem_imp_Set: "x \<in> A \<Longrightarrow> Set(x)"
   unfolding Set_def by blast
@@ -180,9 +185,9 @@ translations
   "\<exists>x \<in> A. P" \<rightleftharpoons> "CONST Bexist(A, \<lambda>x. P)"
 
 syntax
-  "_Sall" :: "[pttrn, o] \<Rightarrow> o"
+  "_Sall" :: "[idts, o] \<Rightarrow> o"
     (\<open>(\<open>indent=3 notation=\<open>binder \<forall>Set\<close>\<close>\<forall>Set'(_')./ _)\<close> 10)
-  "_Sexist" :: "[pttrn, o] \<Rightarrow> o"
+  "_Sexist" :: "[idts, o] \<Rightarrow> o"
     (\<open>(\<open>indent=3 notation=\<open>binder \<exists>Set\<close>\<close>\<exists>Set'(_')./ _)\<close> 10)
 
 syntax_consts
@@ -190,9 +195,96 @@ syntax_consts
 and
   "_Sexist" \<rightleftharpoons> Ex
 
-translations
-  "\<forall>Set(x). P" \<rightharpoonup> "\<forall>x. CONST Set(x) \<longrightarrow> P"
-  "\<exists>Set(x). P" \<rightharpoonup> "\<exists>x. CONST Set(x) \<and> P"
+text \<open>
+  Each variable has its own guard: \<open>\<forall>Set(x y). P\<close> expands to
+  \<open>\<forall>x. Set(x) \<longrightarrow> (\<forall>y. Set(y) \<longrightarrow> P)\<close>.
+  Existential binders use conjunction instead. Printing groups consecutive
+  quantifiers with matching guards, preserving ordinary quantifiers between them.
+\<close>
+
+parse_translation \<open>
+  let
+    fun set_binder_tr quantifier connective =
+      let
+        val binder_tr = snd (Syntax_Trans.mk_binder_tr ("Set", quantifier));
+
+        (* Insert the guard after abstraction, so even an anonymous binder
+           refers to its own variable. Keep binder type constraints intact. *)
+        fun guard (Abs (x, T, P)) =
+              Abs (x, T, Syntax.const connective $
+                (Syntax.const \<^const_syntax>\<open>Set\<close> $ Bound 0) $ P)
+          | guard (Const ("_constrainAbs", T) $ abs $ typ) =
+              Const ("_constrainAbs", T) $ guard abs $ typ
+          | guard t = raise TERM ("Set binder abstraction", [t]);
+
+        fun bind ctxt (Const (\<^syntax_const>\<open>_idts\<close>, _) $ x $ xs, P) =
+              bind ctxt (x, bind ctxt (xs, P))
+          | bind ctxt (x, P) =
+              let val q $ abs = binder_tr ctxt [x, P]
+              in q $ guard abs end;
+
+        fun tr ctxt [xs, P] = bind ctxt (xs, P)
+          | tr _ ts = raise TERM ("Set binder", ts);
+      in tr end;
+  in
+    [(\<^syntax_const>\<open>_Sall\<close>,
+        set_binder_tr \<^const_syntax>\<open>All\<close> \<^const_syntax>\<open>IFOL.imp\<close>),
+     (\<^syntax_const>\<open>_Sexist\<close>,
+        set_binder_tr \<^const_syntax>\<open>Ex\<close> \<^const_syntax>\<open>IFOL.conj\<close>)]
+  end
+\<close>
+
+print_translation \<open>
+  let
+    fun idts [x] = x
+      | idts (x :: xs) = Syntax.const \<^syntax_const>\<open>_idts\<close> $ x $ idts xs
+      | idts [] = raise Match;
+
+    fun set_binder_tr' quantifier connective bounded_syntax =
+      let
+        fun dest_guard (Const (c, _) $
+              (Const (s, _) $ Bound 0) $ P) =
+              if c = connective andalso s = \<^const_syntax>\<open>Set\<close>
+              then P else raise Match
+          | dest_guard _ = raise Match;
+
+        fun collect ctxt bounded (x, T, body) =
+          let
+            val P =
+              if bounded then dest_guard body
+              else if can dest_guard body then raise Match else body;
+            (* Opening one binder at a time preserves outer references and
+               chooses names that cannot capture free variables. *)
+            val (v, Q) =
+              if Name.is_internal x andalso not (Term.is_dependent P) then
+                (Const (\<^syntax_const>\<open>_idtdummy\<close>, T), incr_boundvars ~1 P)
+              else Syntax_Trans.atomic_abs_tr' ctxt (Name.clean x, T, P);
+            val (vs, R) =
+              (case Q of
+                Const (q, _) $ Abs abs =>
+                  if q = quantifier then
+                    (collect ctxt bounded abs handle Match => ([], Q))
+                  else ([], Q)
+              | _ => ([], Q));
+          in (v :: vs, R) end;
+
+        fun tr ctxt [Abs (abs as (_, _, body))] =
+              let
+                val bounded = can dest_guard body;
+                val (vs, P) = collect ctxt bounded abs;
+                val syn = if bounded then bounded_syntax else Mixfix.binder_name quantifier;
+              in Syntax.const syn $ idts vs $ P end
+          | tr _ _ = raise Match;
+      in tr end;
+  in
+    [(\<^const_syntax>\<open>All\<close>,
+        set_binder_tr' \<^const_syntax>\<open>All\<close> \<^const_syntax>\<open>IFOL.imp\<close>
+          \<^syntax_const>\<open>_Sall\<close>),
+     (\<^const_syntax>\<open>Ex\<close>,
+        set_binder_tr' \<^const_syntax>\<open>Ex\<close> \<^const_syntax>\<open>IFOL.conj\<close>
+          \<^syntax_const>\<open>_Sexist\<close>)]
+  end
+\<close>
 
 definition insert :: "[i, i] \<Rightarrow> i"
   where
@@ -248,7 +340,7 @@ section \<open>functions and relations\<close>
 
 definition Pair :: "i \<Rightarrow> o"
   where
-    "Pair(A) \<equiv> \<exists>Set(b). \<exists>Set(c). A = \<langle>b, c\<rangle>"
+    "Pair(A) \<equiv> \<exists>Set(b c). A = \<langle>b, c\<rangle>"
 
 definition Rel :: "i \<Rightarrow> o"
   where
@@ -256,15 +348,15 @@ definition Rel :: "i \<Rightarrow> o"
 
 definition Fun :: "i \<Rightarrow> o"
   where
-    "Fun(F) \<equiv> Rel(F) \<and> (\<forall>x y z. \<langle>x,y\<rangle> \<in> F \<and> \<langle>x,z\<rangle> \<in> F \<longrightarrow> y = z)"
+    "Fun(F) \<equiv> Rel(F) \<and> (\<forall>Set(x y z). \<langle>x,y\<rangle> \<in> F \<and> \<langle>x,z\<rangle> \<in> F \<longrightarrow> y = z)"
 
 definition dom :: "i \<Rightarrow> i"
   where
-    "dom(R) \<equiv> {x | \<exists>y. \<langle>x, y\<rangle> \<in> R}"
+    "dom(R) \<equiv> {x | \<exists>Set(y). \<langle>x, y\<rangle> \<in> R}"
 
 definition rng :: "i \<Rightarrow> i"
   where
-    "rng(R) \<equiv> {y | \<exists>x. \<langle>x, y\<rangle> \<in> R}"
+    "rng(R) \<equiv> {y | \<exists>Set(x). \<langle>x, y\<rangle> \<in> R}"
 
 axiomatization
 where
