@@ -437,7 +437,7 @@ definition successor :: "i \<Rightarrow> i" (\<open>S\<close>)
   where
     "S(x) \<equiv> x \<union> {x}"
 
-definition pair :: "[i, i] \<Rightarrow> i" (\<open>(\<open>notation=\<open>mixfix pair\<close>\<close> \<langle>_,_\<rangle>)\<close> 90)
+definition pair :: "[i, i] \<Rightarrow> i" (\<open>(\<open>notation=\<open>mixfix pair\<close>\<close>\<langle>_,_\<rangle>)\<close> 90)
   where
     "\<langle>a, b\<rangle> \<equiv> {{a}, {a, b}}"
 
@@ -540,7 +540,7 @@ lemma singleton_set:
     ultimately show ?thesis by auto
   qed
 
-lemma singleton_inject [simp]:
+lemma singleton_inject:
   assumes "Set(a)"
   and "{a} = {b}"
   shows "a = b" proof -
@@ -589,4 +589,52 @@ lemma pair_inject:
     qed
     with a_eq_c show ?thesis by blast
   qed
+
+lemma fst_pair [simp]:
+  assumes "Set(a)" "Set(b)"
+  shows "fst(\<langle>a,b\<rangle>) = a" proof
+    fix z
+    show "z \<in> fst(\<langle>a,b\<rangle>) \<longleftrightarrow> z \<in> a" unfolding fst_def proof
+      assume "z \<in> \<Union>{x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}"
+      then obtain x where zx: "z \<in> x" and "x \<in> {x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" ..
+      then have "\<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>" and sx: "Set(x)" by auto
+      then obtain y where "Set(y)" and "\<langle>a,b\<rangle>=\<langle>x,y\<rangle>" by auto
+      with assms sx have "a = x \<and> b = y" by (rule pair_inject)
+      hence "a = x" ..
+      with zx show "z \<in> a" by auto
+    next
+      assume za: "z \<in> a"
+      have "\<langle>a,b\<rangle> = \<langle>a,b\<rangle>" by auto
+      with assms have "\<exists>Set(y). \<langle>a,b\<rangle> = \<langle>a,y\<rangle>" by auto
+      with assms have "a \<in> {x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
+      with za show "z \<in> \<Union>{x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
+    qed
+  qed
+
+lemma snd_pair [simp]:
+  assumes "Set(a)" "Set(b)"
+  shows "snd(\<langle>a,b\<rangle>) = b" proof
+    fix z
+    show "z \<in> snd(\<langle>a,b\<rangle>) \<longleftrightarrow> z \<in> b" unfolding snd_def proof
+      assume "z \<in> \<Union>{y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}"
+      then obtain y where zy: "z \<in> y" and "y \<in> {y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" ..
+      then have sy: "Set(y)" and "\<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>" by auto
+      then obtain x where sx: "Set(x)" and eq: "\<langle>a,b\<rangle> = \<langle>x,y\<rangle>" by auto
+      from assms sx sy eq have "a = x \<and> b = y" by (rule pair_inject)
+      hence "b = y" ..
+      with zy show "z \<in> b" by auto
+    next
+      assume zb: "z \<in> b"
+      have "\<langle>a,b\<rangle> = \<langle>a,b\<rangle>" by auto
+      with assms have "\<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,b\<rangle>" by auto
+      with assms have "b \<in> {y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
+      with zb show "z \<in> \<Union>{y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
+    qed
+  qed
+
+lemma separation:
+  assumes "Set(A)"
+  shows "Set({x \<in> A | P(x)})" proof
+  qed
+
 end
