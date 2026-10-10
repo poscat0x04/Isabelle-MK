@@ -40,11 +40,19 @@ syntax_consts
 translations
   "{x | P}" \<rightleftharpoons> "CONST ClassAbs (\<lambda>x. P)"
 
-lemma classAbsI [intro]: "Set(x) \<and> P(x) \<Longrightarrow> x \<in> {x | P(x)}"
+lemma classAbsI [intro]: "Set(x) \<Longrightarrow> P(x) \<Longrightarrow> x \<in> {x | P(x)}"
   unfolding comprehension by blast
 
-lemma classAbsE [elim]: "x \<in> {x | P(x)} \<Longrightarrow> Set(x) \<and> P(x)"
-  unfolding comprehension by blast
+lemma classAbsE [elim]: 
+  assumes "x \<in> {x | P(x)}"
+  shows "Set(x)" "P(x)" proof
+    from assms show "x \<in> {x | P(x)}" .
+  next
+    from comprehension have "x \<in> {x | P(x)} \<longleftrightarrow> Set(x) \<and> P(x)" .
+    hence "x \<in> {x | P(x)} \<Longrightarrow> Set(x) \<and> P(x)" ..
+    with assms have "Set(x) \<and> P(x)" by auto
+    thus "P(x)" ..
+  qed
 
 syntax
   "_ClassAbsIn" :: "[pttrn, i, o] \<Rightarrow> i"
@@ -317,7 +325,7 @@ definition subset :: "[i, i] \<Rightarrow> o" (infixl \<open>\<subseteq>\<close>
 lemma subsetI [intro]: "(\<And>x. x \<in> A \<Longrightarrow> x \<in> B) \<Longrightarrow> A \<subseteq> B"
   unfolding subset_def by blast
 
-lemma subsetE [elim]: "A \<subseteq> B \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> x \<in> B)"
+lemma subsetD [dest]: "A \<subseteq> B \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> x \<in> B)"
   unfolding subset_def proof -
     assume "\<forall>x. x \<in> A \<longrightarrow> x \<in> B"
     thus "(\<And>x. x \<in> A \<Longrightarrow> x \<in> B)" by blast
@@ -343,7 +351,7 @@ lemma interI [intro]: "x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x
 lemma interE [elim]: "x \<in> (A \<inter> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding inter_def proof -
      assume "x \<in> {x | x \<in> A \<and> x \<in> B }"
-     hence "Set(x) \<and> x \<in> A \<and> x \<in> B" ..
+     hence "x \<in> A \<and> x \<in> B" ..
      moreover assume "(x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R)"
      ultimately show R by blast
   qed
@@ -361,7 +369,7 @@ lemma unionI2 [intro]: "x \<in> B \<Longrightarrow> x \<in> (A \<union> B)"
 lemma unionE [elim]: "x \<in> (A \<union> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> R) \<Longrightarrow> (x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding union_def proof -
     assume "x \<in> {x | x \<in> A \<or> x \<in> B}"
-    hence "Set(x) \<and> (x \<in> A \<or> x \<in> B)" ..
+    hence "x \<in> A \<or> x \<in> B" ..
     moreover assume "x \<in> A \<Longrightarrow> R"
     moreover assume "x \<in> B \<Longrightarrow> R"
     ultimately show R by blast
@@ -377,7 +385,7 @@ lemma diffI [intro]: "x \<in> A \<and> x \<notin> B \<Longrightarrow> x \<in> (A
 lemma diffE [elim]: "x \<in> (A \\ B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<notin> B \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding diff_def proof -
     assume "x \<in> {x | x \<in> A \<and> x \<notin> B}"
-    hence "Set(x) \<and> x \<in> A \<and> x \<notin> B" ..
+    hence "x \<in> A \<and> x \<notin> B" ..
     moreover assume "(x \<in> A \<Longrightarrow> x \<notin> B \<Longrightarrow> R)"
     ultimately show R by blast
   qed
@@ -392,7 +400,6 @@ lemma InterI [intro]: "Set(x) \<Longrightarrow> (\<And> a. a \<in> A \<Longright
 lemma InterE [elim]:"x \<in> \<Inter>A \<Longrightarrow> a \<in> A \<Longrightarrow> x \<in> a"
   unfolding Inter_def proof -
     assume "x \<in> {x | \<forall>a \<in> A. x \<in> a}"
-    hence "Set(x) \<and> (\<forall>a \<in> A. x \<in> a)" ..
     hence "\<forall>a \<in> A. x \<in> a" ..
     moreover assume "a \<in> A"
     ultimately show "x \<in> a" ..
@@ -408,7 +415,6 @@ lemma UnionI [intro]: "x \<in> a \<and> a \<in> A \<Longrightarrow> x \<in> \<Un
 lemma UnionE [elim]: "x \<in> \<Union>A \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding Union_def proof -
     assume "x \<in> {x | \<exists>a \<in> A. x \<in> a}"
-    hence "Set(x) \<and> (\<exists>a \<in> A. x \<in> a)" ..
     hence "\<exists>a \<in> A. x \<in> a" ..
     moreover assume "\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R"
     ultimately show R by (rule BexistE)
@@ -424,7 +430,6 @@ lemma powerI [intro]: "Set(y) \<Longrightarrow> y \<subseteq> x \<Longrightarrow
 lemma powerE [elim]: "y \<in> \<P>(x) \<Longrightarrow> y \<subseteq> x"
   unfolding power_def proof -
     assume "y \<in> {y | y \<subseteq> x}"
-    hence "Set(y) \<and> y \<subseteq> x" ..
     thus "y \<subseteq> x" ..
   qed
 
@@ -438,11 +443,11 @@ definition pair :: "[i, i] \<Rightarrow> i" (\<open>(\<open>notation=\<open>mixf
 
 definition fst :: "i \<Rightarrow> i"
   where
-    "fst(A) = \<Union>\<Inter>A"
+    "fst(A) = \<Union>{x | \<exists>Set(y). A = \<langle>x,y\<rangle>}"
 
 definition snd :: "i \<Rightarrow> i"
   where
-    "snd(A) = \<Union>(\<Union>A \\ \<Inter>A)"
+    "snd(A) = \<Union>{y | \<exists>Set(x). A = \<langle>x,y\<rangle>}"
 
 section \<open>functions and relations\<close>
 
@@ -460,11 +465,11 @@ definition Fun :: "i \<Rightarrow> o"
 
 definition dom :: "i \<Rightarrow> i"
   where
-    "dom(R) \<equiv> {x | \<exists>Set(y). \<langle>x, y\<rangle> \<in> R}"
+    "dom(R) \<equiv> {x | \<exists>Set(y). \<langle>x,y\<rangle> \<in> R}"
 
 definition rng :: "i \<Rightarrow> i"
   where
-    "rng(R) \<equiv> {y | \<exists>Set(x). \<langle>x, y\<rangle> \<in> R}"
+    "rng(R) \<equiv> {y | \<exists>Set(x). \<langle>x,y\<rangle> \<in> R}"
 
 axiomatization
 where
@@ -484,4 +489,104 @@ and
 and
   global_choice: "Rel(R) \<Longrightarrow> \<exists>F. Fun(F) \<and> F \<subseteq> R \<and> dom(F) = dom(R)"
 
+lemma eqI [intro]:
+  assumes "\<And>x. x \<in> A \<longleftrightarrow> x \<in> B"
+  shows "A = B" proof -
+    from assms have "\<forall> C. C \<in> A \<longleftrightarrow> C \<in> B" ..
+    with extensionality show ?thesis by auto
+  qed
+
+lemma pairing_same_set_eq_singleton [simp]:
+  assumes "Set(x)"
+  shows "{x, x} = {x}" proof
+    fix y
+    show "y \<in> {x, x} \<longleftrightarrow> y \<in> {x}" proof
+      assume yx: "y \<in> {x}"
+      hence "y = x" ..
+      hence "y = x \<or> y = x" ..
+      moreover from yx have "Set(y)" ..
+      ultimately show "y \<in> {x, x}" by auto
+    next
+      assume yxx: "y \<in> {x, x}"
+      hence "y = x \<or> y = x" ..
+      hence "y = x" by blast
+      moreover from yxx have "Set(y)" ..
+      ultimately show "y \<in> {x}" by auto
+    qed
+  qed
+
+lemma union_of_pair [simp]: 
+  assumes "Set(a)" "Set(b)"
+  shows "\<Union>\<langle>a,b\<rangle> = {a, b}" proof
+    fix x
+    show "x \<in> \<Union>\<langle>a,b\<rangle> \<longleftrightarrow> x \<in> {a, b}" proof
+      assume "x \<in> \<Union>\<langle>a,b\<rangle>"
+      then obtain y where h1: "y \<in> \<langle>a,b\<rangle>" and h2: "x \<in> y" ..
+      from h1 have "y = {a} \<or> y = {a, b}" unfolding pair_def ..
+      with h2 show "x \<in> {a, b}" by auto
+    next
+      assume h1: "x \<in> {a, b}"
+      from assms have "Set({a, b})" by (rule pairing)
+      hence "{a, b} \<in> \<langle>a,b\<rangle>" unfolding pair_def by auto
+      with h1 show "x \<in> \<Union>\<langle>a,b\<rangle>" by auto
+    qed
+  qed
+
+lemma singleton_set:
+  assumes "Set(x)"
+  shows "Set({x})" proof -
+    from pairing assms have "Set({x, x})" by blast
+    moreover have "{x, x} = {x}" by simp
+    ultimately show ?thesis by auto
+  qed
+
+lemma singleton_inject [simp]:
+  assumes "Set(a)"
+  and "{a} = {b}"
+  shows "a = b" proof -
+    from assms(1) have "a \<in> {a}" by auto
+    with assms(2) have "a \<in> {b}" by auto
+    thus "a = b" by auto
+  qed
+
+lemma pair_inject:
+  assumes "Set(a)" "Set(b)" "Set(c)" "Set(d)"
+      and "\<langle>a,b\<rangle> = \<langle>c,d\<rangle>"
+  shows "a = c \<and> b = d" proof -
+    from assms(1) have "Set({a})" by (rule singleton_set)
+    hence "{a} \<in> \<langle>a,b\<rangle>" unfolding pair_def by auto
+    with assms(5) have "{a} \<in> \<langle>c,d\<rangle>" by auto
+    hence h: "{a} = {c} \<or> {a} = {c, d}" unfolding pair_def by (rule classAbsE)
+    hence a_eq_c: "a = c" proof
+      assume "{a} = {c}"
+      with assms(1) show "a = c" by (rule singleton_inject)
+    next
+      assume "{a} = {c, d}"
+      moreover from assms(3) have "c \<in> {c, d}" by auto
+      ultimately have "c \<in> {a}" by auto
+      hence "c = a" by auto
+      thus "a = c" by auto
+    qed
+    from assms(5) have "\<Union>\<langle>a,b\<rangle> = \<Union>\<langle>c,d\<rangle>" by auto
+    also from assms(1) assms(2) have "\<Union>\<langle>a,b\<rangle> = {a, b}" by simp
+    also from assms(3) assms(4) have "\<Union>\<langle>c,d\<rangle> = {c, d}" by simp
+    finally have ab_eq_cd: "{a, b} = {c, d}" .
+    moreover from assms(2) have "b \<in> {a, b}" by auto
+    ultimately have "b \<in> {c, d}" by auto
+    hence "b = c \<or> b = d" ..
+    hence "b = d" proof
+      assume "b = d"
+      thus "b = d" .
+    next
+      assume "b = c"
+      with a_eq_c have "a = b" by simp
+      hence "{a, b} = {b}" by simp
+      with ab_eq_cd have "{c, d} = {b}" by simp
+      moreover from assms(4) have "d \<in> {c, d}" by auto
+      ultimately have "d \<in> {b}" by auto
+      hence "d = b" ..
+      thus "b = d" ..
+    qed
+    with a_eq_c show ?thesis by blast
+  qed
 end
