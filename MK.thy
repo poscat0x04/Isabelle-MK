@@ -2,6 +2,8 @@ theory MK
   imports FOL
 begin
 
+declare [[eta_contract = false]]
+
 typedecl i
 instance i :: "term" ..
 
@@ -14,11 +16,14 @@ definition Set :: "i \<Rightarrow> o"
   where
     "Set(x) \<equiv> \<exists>A. x \<in> A"
 
-definition PClass :: "i \<Rightarrow> o"
+abbreviation PClass :: "i \<Rightarrow> o"
   where
     "PClass(x) \<equiv> \<not>Set(x)"
 
-lemma mem_imp_Set: "x \<in> A \<Longrightarrow> Set(x)"
+lemma SetI [intro]: "x \<in> A \<Longrightarrow> Set(x)"
+  unfolding Set_def by blast
+
+lemma SetE [elim]: "Set(x) \<Longrightarrow> (\<And> A. x \<in> A \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding Set_def by blast
 
 axiomatization
@@ -35,8 +40,11 @@ syntax_consts
 translations
   "{x | P}" \<rightleftharpoons> "CONST ClassAbs (\<lambda>x. P)"
 
-lemma mem_classAbs [simp]: "x \<in> {x | P(x)} \<longleftrightarrow> Set(x) \<and> P(x)"
-  by (rule comprehension)
+lemma classAbsI [intro]: "Set(x) \<and> P(x) \<Longrightarrow> x \<in> {x | P(x)}"
+  unfolding comprehension by blast
+
+lemma classAbsE [elim]: "x \<in> {x | P(x)} \<Longrightarrow> Set(x) \<and> P(x)"
+  unfolding comprehension by blast
 
 syntax
   "_ClassAbsIn" :: "[pttrn, i, o] \<Rightarrow> i"
@@ -184,6 +192,18 @@ translations
   "\<forall>x \<in> A. P" \<rightleftharpoons> "CONST Ball(A, \<lambda>x. P)"
   "\<exists>x \<in> A. P" \<rightleftharpoons> "CONST Bexist(A, \<lambda>x. P)"
 
+lemma BallI [intro]: "(\<And> x. x \<in> A \<Longrightarrow> P(x)) \<Longrightarrow> \<forall>x \<in> A. P(x)"
+  unfolding Ball_def by blast
+
+lemma BallE [elim]: "\<forall>x \<in> A. P(x) \<Longrightarrow> x \<in> A \<Longrightarrow> P(x)"
+  unfolding Ball_def by blast
+
+lemma BexistI [intro]: "x \<in> A \<Longrightarrow> P(x) \<Longrightarrow> \<exists>y \<in> A. P(y)"
+  unfolding Bexist_def by blast
+
+lemma BexistE [elim]: "\<exists>x \<in> A. P(x) \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> P(x) \<Longrightarrow> R) \<Longrightarrow> R"
+  unfolding Bexist_def by blast
+
 syntax
   "_Sall" :: "[idts, o] \<Rightarrow> o"
     (\<open>(\<open>indent=3 notation=\<open>binder \<forall>Set\<close>\<close>\<forall>Set'(_')./ _)\<close> 10)
@@ -286,10 +306,6 @@ print_translation \<open>
   end
 \<close>
 
-definition insert :: "[i, i] \<Rightarrow> i"
-  where
-    "insert(a, B) \<equiv> {x | x = a \<or> x \<in> B}"
-
 abbreviation not_mem :: "[i, i] \<Rightarrow> o"  (infixl \<open>\<notin>\<close> 50)
   where 
     "A \<notin> B \<equiv> \<not> (A \<in> B)"
@@ -297,6 +313,15 @@ abbreviation not_mem :: "[i, i] \<Rightarrow> o"  (infixl \<open>\<notin>\<close
 definition subset :: "[i, i] \<Rightarrow> o" (infixl \<open>\<subseteq>\<close> 50)
   where
     "A \<subseteq> B \<equiv> \<forall> x. x \<in> A \<longrightarrow> x \<in> B"
+
+lemma subsetI [intro]: "(\<And>x. x \<in> A \<Longrightarrow> x \<in> B) \<Longrightarrow> A \<subseteq> B"
+  unfolding subset_def by blast
+
+lemma subsetE [elim]: "A \<subseteq> B \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> x \<in> B)"
+  unfolding subset_def proof -
+    assume "\<forall>x. x \<in> A \<longrightarrow> x \<in> B"
+    thus "(\<And>x. x \<in> A \<Longrightarrow> x \<in> B)" by blast
+  qed
 
 abbreviation empty :: "i" (\<open>\<emptyset>\<close>)
   where
@@ -312,21 +337,96 @@ definition inter :: "[i, i] \<Rightarrow> i" (infixl \<open>\<inter>\<close> 45)
   where
     "A \<inter> B \<equiv> {x | x \<in> A \<and> x \<in> B }"
 
+lemma interI [intro]: "x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x \<in> (A \<inter> B)"
+  unfolding inter_def by blast
+
+lemma interE [elim]: "x \<in> (A \<inter> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
+  unfolding inter_def proof -
+     assume "x \<in> {x | x \<in> A \<and> x \<in> B }"
+     hence "Set(x) \<and> x \<in> A \<and> x \<in> B" ..
+     moreover assume "(x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R)"
+     ultimately show R by blast
+  qed
+
 definition union :: "[i, i] \<Rightarrow> i" (infixl \<open>\<union>\<close> 44)
   where
     "A \<union> B \<equiv> {x | x \<in> A \<or> x \<in> B }"
 
+lemma unionI1 [intro]: "x \<in> A \<Longrightarrow> x \<in> (A \<union> B)"
+  unfolding union_def by blast
+
+lemma unionI2 [intro]: "x \<in> B \<Longrightarrow> x \<in> (A \<union> B)"
+  unfolding union_def by blast
+
+lemma unionE [elim]: "x \<in> (A \<union> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> R) \<Longrightarrow> (x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
+  unfolding union_def proof -
+    assume "x \<in> {x | x \<in> A \<or> x \<in> B}"
+    hence "Set(x) \<and> (x \<in> A \<or> x \<in> B)" ..
+    moreover assume "x \<in> A \<Longrightarrow> R"
+    moreover assume "x \<in> B \<Longrightarrow> R"
+    ultimately show R by blast
+  qed
+
+definition diff :: "[i, i] \<Rightarrow> i" (infixl \<open>\\<close> 44)
+  where
+    "A \\ B \<equiv> {x | x \<in> A \<and> x \<notin> B}"
+
+lemma diffI [intro]: "x \<in> A \<and> x \<notin> B \<Longrightarrow> x \<in> (A \\ B)"
+  unfolding diff_def by blast
+
+lemma diffE [elim]: "x \<in> (A \\ B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<notin> B \<Longrightarrow> R) \<Longrightarrow> R"
+  unfolding diff_def proof -
+    assume "x \<in> {x | x \<in> A \<and> x \<notin> B}"
+    hence "Set(x) \<and> x \<in> A \<and> x \<notin> B" ..
+    moreover assume "(x \<in> A \<Longrightarrow> x \<notin> B \<Longrightarrow> R)"
+    ultimately show R by blast
+  qed
+
 definition Inter :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<open>prefix \<Inter>\<close>\<close>\<Inter>_)\<close> [90] 90)
   where
-    "\<Inter> A = {x | \<forall> a \<in> A. x \<in> a}"
+    "\<Inter>A = {x | \<forall>a \<in> A. x \<in> a}"
+
+lemma InterI [intro]: "Set(x) \<Longrightarrow> (\<And> a. a \<in> A \<Longrightarrow> x \<in> a) \<Longrightarrow> x \<in> \<Inter>A"
+  unfolding Inter_def by blast
+
+lemma InterE [elim]:"x \<in> \<Inter>A \<Longrightarrow> a \<in> A \<Longrightarrow> x \<in> a"
+  unfolding Inter_def proof -
+    assume "x \<in> {x | \<forall>a \<in> A. x \<in> a}"
+    hence "Set(x) \<and> (\<forall>a \<in> A. x \<in> a)" ..
+    hence "\<forall>a \<in> A. x \<in> a" ..
+    moreover assume "a \<in> A"
+    ultimately show "x \<in> a" ..
+  qed
 
 definition Union :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<open>prefix \<Union>\<close>\<close>\<Union>_)\<close> [90] 90)
   where
-    "\<Union> A = {x | \<exists> a \<in> A. x \<in> a}"
+    "\<Union>A = {x | \<exists>a \<in> A. x \<in> a}"
+
+lemma UnionI [intro]: "x \<in> a \<and> a \<in> A \<Longrightarrow> x \<in> \<Union>A"
+  unfolding Union_def by blast
+
+lemma UnionE [elim]: "x \<in> \<Union>A \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R) \<Longrightarrow> R"
+  unfolding Union_def proof -
+    assume "x \<in> {x | \<exists>a \<in> A. x \<in> a}"
+    hence "Set(x) \<and> (\<exists>a \<in> A. x \<in> a)" ..
+    hence "\<exists>a \<in> A. x \<in> a" ..
+    moreover assume "\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R"
+    ultimately show R by (rule BexistE)
+  qed
 
 definition power :: "i \<Rightarrow> i" (\<open>\<P>\<close>)
   where
     "\<P>(x) \<equiv> {y | y \<subseteq> x}"
+
+lemma powerI [intro]: "Set(y) \<Longrightarrow> y \<subseteq> x \<Longrightarrow> y \<in> \<P>(x)"
+  unfolding power_def by blast
+
+lemma powerE [elim]: "y \<in> \<P>(x) \<Longrightarrow> y \<subseteq> x"
+  unfolding power_def proof -
+    assume "y \<in> {y | y \<subseteq> x}"
+    hence "Set(y) \<and> y \<subseteq> x" ..
+    thus "y \<subseteq> x" ..
+  qed
 
 definition successor :: "i \<Rightarrow> i" (\<open>S\<close>)
   where
@@ -335,6 +435,14 @@ definition successor :: "i \<Rightarrow> i" (\<open>S\<close>)
 definition pair :: "[i, i] \<Rightarrow> i" (\<open>(\<open>notation=\<open>mixfix pair\<close>\<close> \<langle>_,_\<rangle>)\<close> 90)
   where
     "\<langle>a, b\<rangle> \<equiv> {{a}, {a, b}}"
+
+definition fst :: "i \<Rightarrow> i"
+  where
+    "fst(A) = \<Union>\<Inter>A"
+
+definition snd :: "i \<Rightarrow> i"
+  where
+    "snd(A) = \<Union>(\<Union>A \\ \<Inter>A)"
 
 section \<open>functions and relations\<close>
 
@@ -360,13 +468,13 @@ definition rng :: "i \<Rightarrow> i"
 
 axiomatization
 where
-  extensionality: "A = B \<longleftrightarrow> (\<forall> C. C \<in> A \<longleftrightarrow> C \<in> B)"
+  extensionality: "\<forall> C. C \<in> A \<longleftrightarrow> C \<in> B \<Longrightarrow> A = B"
 and
-  power_set: "Set(x) \<Longrightarrow> \<exists>Set(y). y = \<P>(x)"
+  power_set: "Set(x) \<Longrightarrow> Set(\<P>(x))"
 and
-  pairing: "\<lbrakk>Set(x); Set(y)\<rbrakk> \<Longrightarrow> \<exists>Set(a). a = {x, y}"
+  pairing: "\<lbrakk>Set(x); Set(y)\<rbrakk> \<Longrightarrow> Set({x, y})"
 and
-  union: "Set(x) \<Longrightarrow> \<exists>Set(y). \<Union>x \<subseteq> y"
+  union: "Set(x) \<Longrightarrow> Set(\<Union>x)"
 and
   foundation: "X \<noteq> {} \<Longrightarrow> \<exists>a \<in> X. \<forall>b \<in> X. b \<notin> a"
 and
