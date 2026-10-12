@@ -48,6 +48,12 @@ lemma classAbsD [dest]:
   shows "Set(x)" "P(x)"
   using assms unfolding comprehension by blast+
 
+lemma classAbsE [elim]:
+  assumes "x \<in> {x | P(x)}"
+  and "Set(x) \<Longrightarrow> P(x) \<Longrightarrow> R"
+  shows "R"
+  using assms unfolding comprehension by blast
+
 syntax
   "_ClassAbsIn" :: "[pttrn, i, o] \<Rightarrow> i"
     ("(1{_ \<in> _ |/ _})")
@@ -337,7 +343,7 @@ abbreviation universe :: "i" (\<open>\<bbbV>\<close>)
   where
     "\<bbbV> \<equiv> {x | True}"
 
-definition inter :: "[i, i] \<Rightarrow> i" (infixl \<open>\<inter>\<close> 45)
+definition inter :: "[i, i] \<Rightarrow> i" (infixl \<open>\<inter>\<close> 70)
   where
     "A \<inter> B \<equiv> {x | x \<in> A \<and> x \<in> B }"
 
@@ -347,7 +353,7 @@ lemma interI [intro]: "x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x
 lemma interE [elim]: "x \<in> (A \<inter> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding inter_def by blast
 
-definition union :: "[i, i] \<Rightarrow> i" (infixl \<open>\<union>\<close> 44)
+definition union :: "[i, i] \<Rightarrow> i" (infixl \<open>\<union>\<close> 65)
   where
     "A \<union> B \<equiv> {x | x \<in> A \<or> x \<in> B }"
 
@@ -360,7 +366,7 @@ lemma unionI2 [intro]: "x \<in> B \<Longrightarrow> x \<in> (A \<union> B)"
 lemma unionE [elim]: "x \<in> (A \<union> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> R) \<Longrightarrow> (x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding union_def by blast
 
-definition diff :: "[i, i] \<Rightarrow> i" (infixl \<open>\\<close> 44)
+definition diff :: "[i, i] \<Rightarrow> i" (infixl \<open>\\<close> 65)
   where
     "A \\ B \<equiv> {x | x \<in> A \<and> x \<notin> B}"
 
@@ -996,5 +1002,16 @@ lemma subclass_set:
     moreover from assms have "A = ?a" by blast
     ultimately show ?thesis by auto
   qed
+
+lemma misc_simps [simp]:
+  "{} \<union> A = A"
+  "A \<union> {} = A"
+  "{} \<inter> A = {}"
+  "A \<inter> {} = {}"
+  "{} \\ A = {}"
+  "A \\ {} = A"
+  "\<Union>{} = {}"
+  "\<Inter>{} = \<bbbV>"
+  by blast+
 
 end
