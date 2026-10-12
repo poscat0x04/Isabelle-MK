@@ -1108,4 +1108,32 @@ lemma inv_involute:
       by auto
   qed
 
+lemma compose_assoc: "P \<circ> (Q \<circ> R) = (P \<circ> Q) \<circ> R" proof (intro eqI iffI)
+    fix p
+    assume "p \<in> P \<circ> (Q \<circ> R)"
+    then obtain x y z where sxyz: "Set(x)" "Set(y)" "Set(z)" and pp: "p = \<langle>x,z\<rangle>"
+      and yz: "\<langle>y,z\<rangle> \<in> P" and "\<langle>x,y\<rangle> \<in> Q \<circ> R" unfolding compose_def by auto
+    then obtain x' y' z' where sxyz': "Set(x')" "Set(y')" "Set(z')" and "\<langle>x,y\<rangle> = \<langle>x',z'\<rangle>"
+      and "\<langle>y',z'\<rangle> \<in> Q" and "\<langle>x',y'\<rangle> \<in> R" unfolding compose_def by auto
+    moreover with sxyz pair_inject have "x = x'" "y = z'" by auto
+    ultimately have y'y: "\<langle>y',y\<rangle> \<in> Q" and xy': "\<langle>x,y'\<rangle> \<in> R" by auto
+    with sxyz sxyz' have "Set(\<langle>y',z\<rangle>)" "Set(\<langle>x,z\<rangle>)" using pair_set by auto
+    moreover with yz y'y sxyz sxyz' have "\<langle>y',z\<rangle> \<in> P \<circ> Q" unfolding compose_def by auto
+    ultimately show "p \<in> (P \<circ> Q) \<circ> R" unfolding compose_def
+      using sxyz sxyz' xy' pp by auto
+  next
+    fix p
+    assume "p \<in> (P \<circ> Q) \<circ> R"
+    then obtain x y z where sxyz: "Set(x)" "Set(y)" "Set(z)" and pp: "p = \<langle>x,z\<rangle>"
+      and "\<langle>y,z\<rangle> \<in> P \<circ> Q" and xy: "\<langle>x,y\<rangle> \<in> R" unfolding compose_def by auto
+    then obtain x' y' z' where sxyz': "Set(x')" "Set(y')" "Set(z')" and "\<langle>y,z\<rangle> = \<langle>x',z'\<rangle>"
+      and "\<langle>y',z'\<rangle> \<in> P" and "\<langle>x',y'\<rangle> \<in> Q" unfolding compose_def by auto
+    moreover with sxyz pair_inject have "y = x'" "z = z'" by auto
+    ultimately have y'z: "\<langle>y',z\<rangle> \<in> P" and yy': "\<langle>y,y'\<rangle> \<in> Q" by auto
+    with sxyz sxyz' have "Set(\<langle>x,y'\<rangle>)" "Set(\<langle>x,z\<rangle>)" using pair_set by auto
+    moreover with xy yy' sxyz sxyz' have "\<langle>x,y'\<rangle> \<in> Q \<circ> R" unfolding compose_def by auto
+    ultimately show "p \<in> P \<circ> (Q \<circ> R)" unfolding compose_def
+      using sxyz sxyz' y'z pp by auto
+  qed
+
 end
