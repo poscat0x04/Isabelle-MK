@@ -43,7 +43,7 @@ translations
 lemma classAbsI [intro]: "Set(x) \<Longrightarrow> P(x) \<Longrightarrow> x \<in> {x | P(x)}"
   unfolding comprehension by blast
 
-lemma classAbsE [dest]: 
+lemma classAbsD [dest]:
   assumes "x \<in> {x | P(x)}"
   shows "Set(x)" "P(x)" proof
     from assms show "x \<in> {x | P(x)}" .
@@ -202,7 +202,7 @@ translations
 lemma BallI [intro]: "(\<And> x. x \<in> A \<Longrightarrow> P(x)) \<Longrightarrow> \<forall>x \<in> A. P(x)"
   unfolding Ball_def by blast
 
-lemma BallE [elim]: "\<forall>x \<in> A. P(x) \<Longrightarrow> x \<in> A \<Longrightarrow> P(x)"
+lemma BallD [dest]: "\<forall>x \<in> A. P(x) \<Longrightarrow> x \<in> A \<Longrightarrow> P(x)"
   unfolding Ball_def by blast
 
 lemma BexistI [intro]: "x \<in> A \<Longrightarrow> P(x) \<Longrightarrow> \<exists>y \<in> A. P(y)"
@@ -398,7 +398,7 @@ definition Inter :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<op
 lemma InterI [intro]: "Set(x) \<Longrightarrow> (\<And> a. a \<in> A \<Longrightarrow> x \<in> a) \<Longrightarrow> x \<in> \<Inter>A"
   unfolding Inter_def by blast
 
-lemma InterE [elim]:"x \<in> \<Inter>A \<Longrightarrow> a \<in> A \<Longrightarrow> x \<in> a"
+lemma InterD [dest]:"x \<in> \<Inter>A \<Longrightarrow> a \<in> A \<Longrightarrow> x \<in> a"
   unfolding Inter_def proof -
     assume "x \<in> {x | \<forall>a \<in> A. x \<in> a}"
     hence "\<forall>a \<in> A. x \<in> a" ..
@@ -483,7 +483,7 @@ definition power :: "i \<Rightarrow> i" (\<open>\<P>\<close>)
 lemma powerI [intro]: "Set(y) \<Longrightarrow> y \<subseteq> x \<Longrightarrow> y \<in> \<P>(x)"
   unfolding power_def by blast
 
-lemma powerE [elim]: "y \<in> \<P>(x) \<Longrightarrow> y \<subseteq> x"
+lemma powerD [dest]: "y \<in> \<P>(x) \<Longrightarrow> y \<subseteq> x"
   unfolding power_def proof -
     assume "y \<in> {y | y \<subseteq> x}"
     thus "y \<subseteq> x" ..
@@ -639,23 +639,11 @@ definition If :: "[o, i, i] \<Rightarrow> i"
 
 lemma if_True [simp]:
   "P \<Longrightarrow> (if P then a else b) = a"
-  unfolding If_def union_def comprehension proof (rule eqI; auto)
-    fix x
-    assume P
-    assume "x \<in> {x | Set(x) \<and> x \<in> a}"
-    hence "Set(x) \<and> x \<in> a" ..
-    thus "x \<in> a" ..
-  qed
+  unfolding If_def union_def comprehension by (rule eqI; auto)
 
 lemma if_False [simp]:
   "\<not>P \<Longrightarrow> (if P then a else b) = b"
-  unfolding If_def union_def comprehension proof (rule eqI; auto)
-    fix x
-    assume "\<not>P"
-    assume "x \<in> {x | Set(x) \<and> x \<in> b}"
-    hence "Set(x) \<and> x \<in> b" ..
-    thus "x \<in> b" ..
-  qed
+  unfolding If_def union_def comprehension by (rule eqI; auto)
 
 lemma if_set:
   assumes "Set(a)" "Set(b)"
@@ -712,7 +700,7 @@ lemma pair_inject:
     from assms(1) have "Set({a})" by (rule singleton_set)
     hence "{a} \<in> \<langle>a,b\<rangle>" unfolding pair_def by auto
     with assms(5) have "{a} \<in> \<langle>c,d\<rangle>" by auto
-    hence h: "{a} = {c} \<or> {a} = {c, d}" unfolding pair_def by (rule classAbsE)
+    hence h: "{a} = {c} \<or> {a} = {c, d}" unfolding pair_def by (rule classAbsD)
     hence a_eq_c: "a = c" proof
       assume "{a} = {c}"
       with assms(1) show "a = c" by (rule singleton_inject)
