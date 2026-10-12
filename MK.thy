@@ -546,6 +546,18 @@ definition rng :: "i \<Rightarrow> i"
   where
     "rng(R) \<equiv> {y | \<exists>Set(x). \<langle>x,y\<rangle> \<in> R}"
 
+lemma rngI [intro]: "Set(x) \<Longrightarrow> Set(y) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> y \<in> rng(R)"
+  unfolding rng_def by auto
+
+lemma rngE [elim]: "y \<in> rng(R) \<Longrightarrow> (\<And>x. Set(x) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P) \<Longrightarrow> P"
+  proof -
+    assume "y \<in> rng(R)"
+    hence "\<exists>Set(x). \<langle>x,y\<rangle> \<in> R" and "Set(y)" unfolding rng_def by auto
+    then obtain x where "Set(x)" and "\<langle>x,y\<rangle> \<in> R" by auto
+    moreover assume "\<And>x. Set(x) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P"
+    ultimately show P by auto
+  qed
+
 definition ap :: "[i, i] \<Rightarrow> i" (infixl \<open>`\<close> 90)
   where
     "f`x \<equiv> \<Union>{y | \<langle>x,y\<rangle> \<in> f}"
@@ -626,6 +638,18 @@ lemma if_False [simp]:
     assume "x \<in> {x | Set(x) \<and> x \<in> b}"
     hence "Set(x) \<and> x \<in> b" ..
     thus "x \<in> b" ..
+  qed
+
+lemma if_set:
+  assumes "Set(a)" "Set(b)"
+  shows "Set(if P then a else b)" proof (cases P)
+    case True
+    hence "(if P then a else b) = a" by simp
+    with assms show ?thesis by auto
+  next
+    case False
+    hence "(if P then a else b) = b" by simp
+    with assms show ?thesis by auto
   qed
 
 lemma pairing_same_set_eq_singleton [simp]:
@@ -795,13 +819,13 @@ syntax
   "_SUM"  :: "[pttrn, i, i] \<Rightarrow> i" (\<open>(\<open>indent=3 notation=\<open>mixfix \<Sum>\<in>\<close>\<close>\<Sum>_\<in>_./ _)\<close> 10)
   "_lam"  :: "[pttrn, i, i] \<Rightarrow> i" (\<open>(\<open>indent=3 notation=\<open>mixfix \<lambda>\<in>\<close>\<close>\<lambda>_\<in>_./ _)\<close> 10)
 syntax_consts
-  "_PROD" == Pi and
-  "_SUM" == Sigma and
-  "_lam" == Lambda
+  "_PROD" \<rightleftharpoons> Pi and
+  "_SUM" \<rightleftharpoons> Sigma and
+  "_lam" \<rightleftharpoons> Lambda
 translations
-  "\<Prod>x\<in>A. B"   == "CONST Pi(A, \<lambda>x. B)"
-  "\<Sum>x\<in>A. B"   == "CONST Sigma(A, \<lambda>x. B)"
-  "\<lambda>x\<in>A. f"    == "CONST Lambda(A, \<lambda>x. f)"
+  "\<Prod>x\<in>A. B" \<rightleftharpoons> "CONST Pi(A, \<lambda>x. B)"
+  "\<Sum>x\<in>A. B" \<rightleftharpoons> "CONST Sigma(A, \<lambda>x. B)"
+  "\<lambda>x\<in>A. f" \<rightleftharpoons> "CONST Lambda(A, \<lambda>x. f)"
 
 
 lemma Lambda_mem:
@@ -866,115 +890,58 @@ lemma Lambda_dom:
     with xa' show "x \<in> A" by auto
   qed
 
+lemma Lambda_ap:
+  assumes "a \<in> A" "Set(f(a))"
+  shows "Lambda(A,f)`a = f(a)" proof
+  qed
+
 lemma separation:
   assumes "Set(A)"
   shows "Set({x \<in> A | P(x)})" proof -
-    from infinity obtain N where "{} \<in> N" by auto
-    hence empty_set: "Set({})" ..
-    have pair_set: "\<And>a b. Set(a) \<Longrightarrow> Set(b) \<Longrightarrow> Set(\<langle>a,b\<rangle>)" proof -
-      fix a b
-      assume "Set(a)" "Set(b)"
-      hence "Set({a})" and "Set({a, b})" by (auto intro: singleton_set pairing)
-      hence "Set({{a}, {a, b}})" by (rule pairing)
-      thus "Set(\<langle>a,b\<rangle>)" unfolding pair_def .
-    qed
-    let ?f = "{\<langle>a,b\<rangle> | a b. a \<in> A \<and> ((P(a) \<and> b = {a}) \<or> (\<not>P(a) \<and> b = {}))}"
-    have graph_mem: "\<And>x y. Set(x) \<Longrightarrow> Set(y) \<Longrightarrow>
-        \<langle>x,y\<rangle> \<in> ?f \<longleftrightarrow> x \<in> A \<and> ((P(x) \<and> y = {x}) \<or> (\<not>P(x) \<and> y = {}))" proof -
-      fix x y
-      assume sx: "Set(x)" and sy: "Set(y)"
-      show "\<langle>x,y\<rangle> \<in> ?f \<longleftrightarrow> x \<in> A \<and> ((P(x) \<and> y = {x}) \<or> (\<not>P(x) \<and> y = {}))" proof
-        assume "\<langle>x,y\<rangle> \<in> ?f"
-        hence "\<exists>a b. a \<in> A \<and> ((P(a) \<and> b = {a}) \<or> (\<not>P(a) \<and> b = {})) \<and> \<langle>x,y\<rangle> = \<langle>a,b\<rangle>" unfolding comprehension by blast
-        then obtain a b where aA: "a \<in> A"
-            and image: "(P(a) \<and> b = {a}) \<or> (\<not>P(a) \<and> b = {})"
-            and eq: "\<langle>x,y\<rangle> = \<langle>a,b\<rangle>" by blast
-        from aA have sa: "Set(a)" ..
-        hence "Set({a})" by (rule singleton_set)
-        with image empty_set have sb: "Set(b)" by auto
-        from sx sy sa sb eq have "x = a \<and> y = b" by (rule pair_inject)
-        with aA image show "x \<in> A \<and> ((P(x) \<and> y = {x}) \<or> (\<not>P(x) \<and> y = {}))" by auto
-      next
-        assume "x \<in> A \<and> ((P(x) \<and> y = {x}) \<or> (\<not>P(x) \<and> y = {}))"
-        moreover from sx sy have "Set(\<langle>x,y\<rangle>)" by (rule pair_set)
-        ultimately show "\<langle>x,y\<rangle> \<in> ?f" by auto
-      qed
-    qed
-    have rel: "Rel(?f)" unfolding Rel_def proof (intro allI impI)
-      fix p
-      assume "p \<in> ?f"
-      hence "\<exists>a b. a \<in> A \<and> ((P(a) \<and> b = {a}) \<or> (\<not>P(a) \<and> b = {})) \<and> p = \<langle>a,b\<rangle>" unfolding comprehension by blast
-      then obtain a b where aA: "a \<in> A"
-          and image: "(P(a) \<and> b = {a}) \<or> (\<not>P(a) \<and> b = {})"
-          and eq: "p = \<langle>a,b\<rangle>" by blast
-      from aA have sa: "Set(a)" ..
+    let ?f = "\<lambda>a \<in> A. if P(a) then {a} else {}"
+    have set_img: "\<And>a. a \<in> A \<Longrightarrow> Set(if P(a) then {a} else {})" proof -
+      fix a
+      assume "a \<in> A"
+      hence "Set(a)" ..
       hence "Set({a})" by (rule singleton_set)
-      with image empty_set have "Set(b)" by auto
-      with sa eq show "Pair(p)" unfolding Pair_def by auto
+      with empty_set if_set show "Set(if P(a) then {a} else {})" by auto
     qed
-    have fun: "Fun(?f)" unfolding Fun_def proof
-      from rel show "Rel(?f)" .
-    next
-      show "\<forall>Set(x y z). \<langle>x,y\<rangle> \<in> ?f \<and> \<langle>x,z\<rangle> \<in> ?f \<longrightarrow> y = z" proof (intro allI impI)
-        fix x y z
-        assume sx: "Set(x)" and sy: "Set(y)" and sz: "Set(z)"
-            and pairs: "\<langle>x,y\<rangle> \<in> ?f \<and> \<langle>x,z\<rangle> \<in> ?f"
-        from sx sy graph_mem pairs have "(P(x) \<and> y = {x}) \<or> (\<not>P(x) \<and> y = {})" by blast
-        moreover from sx sz graph_mem pairs have "(P(x) \<and> z = {x}) \<or> (\<not>P(x) \<and> z = {})" by blast
-        ultimately show "y = z" by blast
-      qed
-    qed
-    have domain: "dom(?f) = A" proof
-      fix x
-      show "x \<in> dom(?f) \<longleftrightarrow> x \<in> A" unfolding dom_def proof
-        assume "x \<in> {x | \<exists>Set(y). \<langle>x,y\<rangle> \<in> ?f}"
-        then have sx: "Set(x)" and "\<exists>Set(y). \<langle>x,y\<rangle> \<in> ?f" by auto
-        then obtain y where sy: "Set(y)" and "\<langle>x,y\<rangle> \<in> ?f" by auto
-        with sx sy graph_mem show "x \<in> A" by blast
-      next
-        assume xA: "x \<in> A"
-        hence sx: "Set(x)" ..
-        have "\<exists>Set(y). \<langle>x,y\<rangle> \<in> ?f" proof (cases "P(x)")
-          case True
-          from sx have "Set({x})" by (rule singleton_set)
-          with sx xA True graph_mem show ?thesis by blast
-        next
-          case False
-          with sx xA empty_set graph_mem show ?thesis by blast
-        qed
-        with sx show "x \<in> {x | \<exists>Set(y). \<langle>x,y\<rangle> \<in> ?f}" by auto
-      qed
-    qed
-    with assms have "Set(dom(?f))" by simp
-    with fun have "Set(rng(?f))" by (rule replacement)
+    hence fun_f: "Fun(?f)" by (rule Lambda_fun)
+    with set_img assms Lambda_dom have "Set(dom(?f))" by auto
+    with fun_f have "Set(rng(?f))" by (rule replacement)
     hence range_union_set: "Set(\<Union>rng(?f))" by (rule union)
     have "\<Union>rng(?f) = {x \<in> A | P(x)}" proof
       fix x
       show "x \<in> \<Union>rng(?f) \<longleftrightarrow> x \<in> {x \<in> A | P(x)}" proof
         assume "x \<in> \<Union>rng(?f)"
-        then obtain y where yr: "y \<in> rng(?f)" and xy: "x \<in> y" ..
-        from yr have sy: "Set(y)" and "\<exists>Set(a). \<langle>a,y\<rangle> \<in> ?f" unfolding rng_def by auto
-        then obtain a where sa: "Set(a)" and "\<langle>a,y\<rangle> \<in> ?f" by auto
-        with sy graph_mem have aA: "a \<in> A"
-            and image: "(P(a) \<and> y = {a}) \<or> (\<not>P(a) \<and> y = {})" by blast+
-        from image show "x \<in> {x \<in> A | P(x)}" proof
-          assume good: "P(a) \<and> y = {a}"
-          with xy have "x \<in> {a}" by auto
-          hence "x = a" ..
-          with aA good show "x \<in> {x \<in> A | P(x)}" by auto
+        then obtain y where "y \<in> rng(?f)" and x_in_y: "x \<in> y" ..
+        then obtain a where sa: "Set(a)" and sy: "Set(y)" and "\<langle>a,y\<rangle> \<in> ?f" by auto
+        then obtain a' where a'_in_A: "a' \<in> A" and eq: "\<langle>a,y\<rangle> = \<langle>a', if P(a') then {a'} else {}\<rangle>" by auto
+        hence sa': "Set(a')" by auto
+        with empty_set if_set singleton_set have "Set(if P(a') then {a'} else {})" by auto
+        with sa sy sa' eq pair_inject have a_eq_a': "a = a'" and yeq: "y = (if P(a') then {a'} else {})" by auto
+        show "x \<in> {x \<in> A | P(x)}" proof (cases "P(a')")
+          case True
+          with yeq if_True have "y = {a'}" by auto
+          with x_in_y have "x = a'" by auto
+          with a'_in_A True have "x \<in> A" and "P(x)" by auto
+          thus ?thesis by auto
         next
-          assume "\<not>P(a) \<and> y = {}"
-          with xy have "x \<in> {}" by auto
-          hence False ..
-          thus "x \<in> {x \<in> A | P(x)}" ..
+          case False
+          with yeq if_False have "y = {}" by auto
+          with x_in_y have False by auto
+          thus ?thesis by auto
         qed
       next
         assume "x \<in> {x \<in> A | P(x)}"
-        hence sx: "Set(x)" and "x \<in> A \<and> P(x)" by (rule classAbsE)+
-        then have xA: "x \<in> A" and px: "P(x)" by auto
-        from sx have ssx: "Set({x})" by (rule singleton_set)
-        with sx xA px graph_mem have "\<langle>x,{x}\<rangle> \<in> ?f" by blast
-        with sx ssx have "{x} \<in> rng(?f)" unfolding rng_def by auto
+        hence "x \<in> A \<and> P(x)" ..
+        hence sx: "Set(x)" and xa: "x \<in> A" and px: "P(x)" by auto
+        with singleton_set have ssx: "Set({x})" by auto
+        with empty_set if_set have "Set(if P(x) then {x} else {})" by auto
+        with xa have "\<langle>x,if P(x) then {x} else {}\<rangle> \<in> ?f" by auto
+        moreover from px if_True have "(if P(x) then {x} else {}) = {x}" by auto
+        ultimately have "\<langle>x,{x}\<rangle> \<in> ?f" by auto
+        with sx ssx have "{x} \<in> rng(?f)" by auto
         moreover from sx have "x \<in> {x}" by auto
         ultimately show "x \<in> \<Union>rng(?f)" by auto
       qed
