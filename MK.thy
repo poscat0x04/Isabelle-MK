@@ -43,7 +43,7 @@ translations
 lemma classAbsI [intro]: "Set(x) \<Longrightarrow> P(x) \<Longrightarrow> x \<in> {x | P(x)}"
   unfolding comprehension by blast
 
-lemma classAbsE [elim]: 
+lemma classAbsE [dest]: 
   assumes "x \<in> {x | P(x)}"
   shows "Set(x)" "P(x)" proof
     from assms show "x \<in> {x | P(x)}" .
@@ -1036,39 +1036,52 @@ lemma separation:
     with range_union_set show ?thesis by simp
   qed
 
+lemma union_of_upair:
+  assumes "Set(a)" "Set(b)"
+  shows "\<Union>{a, b} = (a \<union> b)" proof (intro eqI iffI)
+    fix x
+    assume "x \<in> \<Union>{a, b}"
+    then obtain y where xy: "x \<in> y" and y: "y \<in> {a, b}" by auto
+    from y have "y = a \<or> y = b" by blast
+    then show "x \<in> (a \<union> b)" proof
+      assume "y = a"
+      with xy have "x \<in> a" by auto
+      thus ?thesis by auto
+    next
+      assume "y = b"
+      with xy have "x \<in> b" by auto
+      thus ?thesis by auto
+    qed
+  next
+    fix x
+    assume "x \<in> (a \<union> b)"
+    hence "x \<in> a \<or> x \<in> b" by auto
+    then show "x \<in> \<Union>{a, b}" proof
+      assume "x \<in> a"
+      moreover from assms have "a \<in> {a, b}" by auto
+      ultimately show ?thesis by auto
+    next
+      assume "x \<in> b"
+      moreover from assms have "b \<in> {a, b}" by auto
+      ultimately show ?thesis by auto
+    qed
+  qed
+
 lemma union_set:
   assumes "Set(a)" "Set(b)"
   shows "Set(a \<union> b)" proof -
     from assms have "Set({a, b})" by (rule pairing)
     hence "Set(\<Union>{a, b})" by (rule union)
-    moreover have "\<Union>{a, b} = (a \<union> b)" proof (intro eqI iffI)
-      fix x
-      assume "x \<in> \<Union>{a, b}"
-      then obtain y where xy: "x \<in> y" and y: "y \<in> {a, b}" by auto
-      from y have "y = a \<or> y = b" by (rule classAbsE)
-      then show "x \<in> (a \<union> b)" proof
-        assume "y = a"
-        with xy have "x \<in> a" by auto
-        thus ?thesis by auto
-      next
-        assume "y = b"
-        with xy have "x \<in> b" by auto
-        thus ?thesis by auto
-      qed
-    next
-      fix x
-      assume "x \<in> (a \<union> b)"
-      hence "x \<in> a \<or> x \<in> b" by auto
-      then show "x \<in> \<Union>{a, b}" proof
-        assume "x \<in> a"
-        moreover from assms have "a \<in> {a, b}" by auto
-        ultimately show ?thesis by auto
-      next
-        assume "x \<in> b"
-        moreover from assms have "b \<in> {a, b}" by auto
-        ultimately show ?thesis by auto
-      qed
-    qed
+    moreover with assms union_of_upair have "\<Union>{a, b} = (a \<union> b)" by auto
+    ultimately show ?thesis by auto
+  qed
+
+lemma subclass_set:
+  assumes "A \<subseteq> b" "Set(b)"
+  shows "Set(A)" proof -
+    let ?a = "{x \<in> b | x \<in> A}"
+    from separation assms have "Set(?a)" by auto
+    moreover from assms have "A = ?a" by blast
     ultimately show ?thesis by auto
   qed
 
