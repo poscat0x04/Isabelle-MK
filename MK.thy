@@ -736,7 +736,6 @@ lemma LambdaI [intro]:
   shows "\<langle>x,f(x)\<rangle> \<in> Lambda(A, f)"
   unfolding Lambda_def proof
     from assms show "Set(\<langle>x,f(x)\<rangle>)" by (blast intro: pair_set)
-  next
     from assms(1) show "\<exists>xa. xa \<in> A \<and> \<langle>x,f(x)\<rangle> = \<langle>xa,f(xa)\<rangle>" by blast
   qed
 
@@ -1006,8 +1005,12 @@ lemma subclass_set:
 lemma misc_simps [simp]:
   "{} \<union> A = A"
   "A \<union> {} = A"
+  "\<bbbV> \<union> A = \<bbbV>"
+  "A \<union> \<bbbV> = \<bbbV>"
   "{} \<inter> A = {}"
   "A \<inter> {} = {}"
+  "\<bbbV> \<inter> A = A"
+  "A \<inter> \<bbbV> = A"
   "{} \\ A = {}"
   "A \\ {} = A"
   "\<Union>{} = {}"
@@ -1018,5 +1021,47 @@ lemma simp_singleton [simp]:
   assumes "Set(a)"
   shows "\<Union>{a} = a" "\<Inter>{a} = a"
   using assms by blast+
+
+lemma simp_pclass_singleton [simp]:
+  assumes "PClass(a)"
+  shows "{a} = {}"
+  using assms by blast
+
+lemma Lambda_cong:
+  assumes "\<And>x. x \<in> A \<Longrightarrow> f(x) = g(x)"
+  and "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
+  shows "Lambda(A,f) = Lambda(A,g)" proof (intro eqI iffI)
+    fix p
+    assume "p \<in> Lambda(A, f)"
+    then obtain x where xa: "x \<in> A" and "p = \<langle>x,f(x)\<rangle>" ..
+    with assms have eq: "p = \<langle>x,g(x)\<rangle>" by auto
+    from assms xa have "Set(g(x))" by auto
+    with xa eq show "p \<in> Lambda(A,g)" by auto
+  next
+    fix p
+    assume "p \<in> Lambda(A, g)"
+    then obtain x where xa: "x \<in> A" and "p = \<langle>x,g(x)\<rangle>" ..
+    with assms have eq: "p = \<langle>x,f(x)\<rangle>" by auto
+    from assms xa have "Set(f(x))" by auto
+    with xa eq show "p \<in> Lambda(A,f)" by auto
+  qed
+
+lemma funext:
+  assumes fun: "Fun(f)" "Fun(g)"
+  and "dom(f) = dom(g)"
+  and "\<forall>x \<in> dom(f). f`x = g`x"
+  shows "f = g" proof -
+    from fun have "f = Lambda(dom(f), \<lambda>x. f`x)" by simp
+    also have "Lambda(dom(f), \<lambda>x. f`x) = Lambda(dom(f), \<lambda>x. g`x)" proof (rule Lambda_cong)
+        fix x
+        assume x_in_dom_f: "x \<in> dom(f)"
+        with assms(4) show "f`x = g`x" by blast
+        from x_in_dom_f have "Set(x)" ..
+        from fun(1) this x_in_dom_f show "Set(f`x)" by (rule ap_welldefined(2))
+      qed
+    also have "Lambda(dom(f), \<lambda>x. g`x) = Lambda(dom(g), \<lambda>x. g`x)" using assms(3) by simp
+    also from fun(2) have "Lambda(dom(g), \<lambda>x. g`x) = g" by (rule Lambda_eta)
+    finally show ?thesis .
+  qed
 
 end
