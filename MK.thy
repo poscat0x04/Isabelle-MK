@@ -653,12 +653,12 @@ lemma union_of_pair [simp]:
 lemma pair_inject:
   assumes "Set(a)" "Set(b)" "Set(c)" "Set(d)"
       and "\<langle>a,b\<rangle> = \<langle>c,d\<rangle>"
-  shows "a = c \<and> b = d" proof -
+  shows "a = c" "b = d" proof -
     from assms(1) have "Set({a})" by (rule singleton_set)
     hence "{a} \<in> \<langle>a,b\<rangle>" unfolding pair_def by auto
     with assms(5) have "{a} \<in> \<langle>c,d\<rangle>" by auto
     hence h: "{a} = {c} \<or> {a} = {c, d}" unfolding pair_def by (rule classAbsD)
-    hence a_eq_c: "a = c" proof
+    thus a_eq_c: "a = c" proof
       assume "{a} = {c}"
       with assms(1) show "a = c" by (rule singleton_inject)
     next
@@ -675,7 +675,7 @@ lemma pair_inject:
     moreover from assms(2) have "b \<in> {a, b}" by auto
     ultimately have "b \<in> {c, d}" by auto
     hence "b = c \<or> b = d" ..
-    hence "b = d" proof
+    thus "b = d" proof
       assume "b = d"
       thus "b = d" .
     next
@@ -688,7 +688,6 @@ lemma pair_inject:
       hence "d = b" ..
       thus "b = d" ..
     qed
-    with a_eq_c show ?thesis by blast
   qed
 
 lemma fst_pair [simp]:
@@ -700,8 +699,7 @@ lemma fst_pair [simp]:
       then obtain x where zx: "z \<in> x" and "x \<in> {x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" ..
       then have "\<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>" and sx: "Set(x)" by auto
       then obtain y where "Set(y)" and "\<langle>a,b\<rangle>=\<langle>x,y\<rangle>" by auto
-      with assms sx have "a = x \<and> b = y" by (rule pair_inject)
-      hence "a = x" ..
+      with assms sx have "a = x" by (rule pair_inject)
       with zx show "z \<in> a" by auto
     next
       assume "z \<in> a"
@@ -718,8 +716,7 @@ lemma snd_pair [simp]:
       then obtain y where zy: "z \<in> y" and "y \<in> {y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" ..
       then have sy: "Set(y)" and "\<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>" by auto
       then obtain x where sx: "Set(x)" and eq: "\<langle>a,b\<rangle> = \<langle>x,y\<rangle>" by auto
-      from assms sx sy eq have "a = x \<and> b = y" by (rule pair_inject)
-      hence "b = y" ..
+      from assms sx sy eq have "b = y" by (rule pair_inject)
       with zy show "z \<in> b" by auto
     next
       assume "z \<in> b"
@@ -1066,15 +1063,15 @@ lemma funext:
 
 definition compose :: "[i, i] \<Rightarrow> i" (infixr \<open>\<circ>\<close> 60)
   where
-    "P \<circ> R \<equiv> {\<langle>x,z\<rangle> | x y z. \<langle>x,y\<rangle> \<in> R \<and> \<langle>y,z\<rangle> \<in> P}"
+    "P \<circ> R \<equiv> {\<langle>x,z\<rangle> | x y z. Set(x) \<and> Set(y) \<and> Set(z) \<and> \<langle>x,y\<rangle> \<in> R \<and> \<langle>y,z\<rangle> \<in> P}"
 
 definition restriction :: "[i, i] \<Rightarrow> i" (infixl \<open>\<restriction>\<close> 60)
   where
-    "R \<restriction> A \<equiv> {\<langle>x,y\<rangle> | x y. \<langle>x,y\<rangle> \<in> R \<and> x \<in> A}"
+    "R \<restriction> A \<equiv> {\<langle>x,y\<rangle> | x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> R \<and> x \<in> A}"
 
 definition inverse :: "i \<Rightarrow> i" ("(_\<inverse>)" [1000] 1000)
   where
-    "R\<inverse> \<equiv> {\<langle>y,x\<rangle> | x y. \<langle>x,y\<rangle> \<in> R}"
+    "R\<inverse> \<equiv> {\<langle>y,x\<rangle> | x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> R}"
 
 definition fld :: "i \<Rightarrow> i"
   where
@@ -1087,5 +1084,28 @@ definition image :: "[i, i] \<Rightarrow> i" (infixl \<open>``\<close> 90)
 definition inverse_image :: "[i, i] \<Rightarrow> i" (infixl \<open>-``\<close> 90)
   where
     "F -`` A \<equiv> {x | \<exists>y \<in> A. \<langle>x,y\<rangle> \<in> F}"
+
+lemma inv_involute:
+  assumes "Rel(R)"
+  shows "R\<inverse>\<inverse> = R" unfolding inverse_def proof (intro eqI iffI)
+    fix p
+    assume "p \<in> {\<langle>y,x\<rangle> |x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> {\<langle>y,x\<rangle> |x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> R}}"
+    then obtain x y where "\<langle>x,y\<rangle> \<in> {\<langle>y,x\<rangle> |x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> R}" and pp: "p = \<langle>y,x\<rangle>"
+      and sxy: "Set(x)" "Set(y)" by auto
+    then obtain x' y' where xy'_in_r: "\<langle>x',y'\<rangle> \<in> R" and "\<langle>x,y\<rangle> = \<langle>y',x'\<rangle>"
+      and "Set(x')" "Set(y')" by auto
+    with sxy pair_inject pp have "x = y'" and "y = x'" by auto
+    with pp xy'_in_r show "p \<in> R" by auto
+  next
+    fix p
+    assume p: "p \<in> R"
+    with assms obtain x y where sxy: "Set(x)" "Set(y)" and pp: "p = \<langle>x,y\<rangle>"
+      unfolding Rel_def Pair_def by auto
+    moreover with pair_set have "Set(\<langle>y,x\<rangle>)" and sxy_pair: "Set(\<langle>x,y\<rangle>)" by auto
+    ultimately have "\<langle>y,x\<rangle> \<in> {\<langle>y,x\<rangle> |x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> R}" using p by auto
+    with pp p sxy_pair sxy show
+      "p \<in> {\<langle>y,x\<rangle> |x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> {\<langle>y,x\<rangle> |x y. Set(x) \<and> Set(y) \<and> \<langle>x,y\<rangle> \<in> R}}"
+      by auto
+  qed
 
 end
