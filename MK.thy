@@ -1014,4 +1014,9 @@ lemma misc_simps [simp]:
   "\<Inter>{} = \<bbbV>"
   by blast+
 
+lemma simp_singleton [simp]:
+  assumes "Set(a)"
+  shows "\<Union>{a} = a" "\<Inter>{a} = a"
+  using assms by blast+
+
 end
