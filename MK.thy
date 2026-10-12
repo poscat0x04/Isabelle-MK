@@ -542,6 +542,18 @@ definition dom :: "i \<Rightarrow> i"
   where
     "dom(R) \<equiv> {x | \<exists>Set(y). \<langle>x,y\<rangle> \<in> R}"
 
+lemma domI [intro]: "Set(x) \<Longrightarrow> Set(y) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> x \<in> dom(R)"
+  unfolding dom_def by auto
+
+lemma domE [elim]: "x \<in> dom(R) \<Longrightarrow> (\<And>y. Set(y) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P) \<Longrightarrow> P"
+  proof -
+    assume "x \<in> dom(R)"
+    hence "\<exists>Set(y). \<langle>x,y\<rangle> \<in> R" unfolding dom_def by auto
+    then obtain y where "Set(y)" and "\<langle>x,y\<rangle> \<in> R" by auto
+    moreover assume "\<And>y. Set(y) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P"
+    ultimately show P by auto
+  qed
+
 definition rng :: "i \<Rightarrow> i"
   where
     "rng(R) \<equiv> {y | \<exists>Set(x). \<langle>x,y\<rangle> \<in> R}"
@@ -552,7 +564,7 @@ lemma rngI [intro]: "Set(x) \<Longrightarrow> Set(y) \<Longrightarrow> \<langle>
 lemma rngE [elim]: "y \<in> rng(R) \<Longrightarrow> (\<And>x. Set(x) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P) \<Longrightarrow> P"
   proof -
     assume "y \<in> rng(R)"
-    hence "\<exists>Set(x). \<langle>x,y\<rangle> \<in> R" and "Set(y)" unfolding rng_def by auto
+    hence "\<exists>Set(x). \<langle>x,y\<rangle> \<in> R" unfolding rng_def by auto
     then obtain x where "Set(x)" and "\<langle>x,y\<rangle> \<in> R" by auto
     moreover assume "\<And>x. Set(x) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P"
     ultimately show P by auto
@@ -912,10 +924,58 @@ lemma Lambda_ap [simp]:
     with x_in_fa show "x \<in> \<Union>{y | \<langle>a,y\<rangle> \<in> Lambda(A, f)}" by auto
   qed
 
+lemma ap_welldefined:
+  assumes "Fun(f)" "Set(x)"
+  and x_in_dom_f: "x \<in> dom(f)"
+  shows "\<langle>x,f`x\<rangle> \<in> f" and "Set(f`x)" proof -
+    from x_in_dom_f obtain y where sy: "Set(y)" and xy_in_f: "\<langle>x,y\<rangle> \<in> f" by auto
+    moreover have f_ap_x: "f`x = y" unfolding ap_def proof (intro eqI iffI)
+      fix a
+      assume "a \<in> \<Union>{y | \<langle>x,y\<rangle> \<in> f}"
+      then obtain b where "b \<in> {y | \<langle>x,y\<rangle> \<in> f}" and ab: "a \<in> b" by auto
+      hence "\<langle>x,b\<rangle> \<in> f" and "Set(b)" by auto
+      with assms(2) sy xy_in_f assms have "y = b" unfolding Fun_def by auto
+      with ab show "a \<in> y" by auto
+    next
+      fix a
+      assume "a \<in> y"
+      moreover from sy xy_in_f have "y \<in> {y | \<langle>x,y\<rangle> \<in> f}" by auto
+      ultimately show "a \<in> \<Union>{y | \<langle>x,y\<rangle> \<in> f}" by auto
+    qed
+    ultimately show "\<langle>x,f`x\<rangle> \<in> f" by auto
+    from f_ap_x sy show "Set(f`x)" by auto
+  qed
+
+lemma ap_eqI:
+  assumes "Fun(f)" "Set(x)" "Set(y)"
+  and "\<langle>x,y\<rangle> \<in> f"
+  shows "y = f`x" and "Set(f`x)" proof -
+    from assms have x_dom: "x \<in> dom(f)" unfolding dom_def by auto
+    with assms ap_welldefined have "\<langle>x,f`x\<rangle> \<in> f" and "Set(f`x)" by auto
+    with assms show "y = f`x" unfolding Fun_def by auto
+    from assms x_dom ap_welldefined show "Set(f`x)" by auto
+  qed
+
 lemma Lambda_eta [simp]:
-   assumes "Fun(f)"
-   shows "Lambda(dom(f), \<lambda>x. f`x) = f" proof (intro eqI iffI)
-   qed
+  assumes "Fun(f)"
+  shows "Lambda(dom(f), \<lambda>x. f`x) = f" proof (intro eqI iffI)
+    fix p
+    assume "p \<in> (\<lambda>x\<in>dom(f). f ` x)"
+    then obtain a where a_in_dom_f: "a \<in> dom(f)" and p_eq: "p = \<langle>a, f`a\<rangle>" by auto
+    then obtain b where sb: "Set(b)" and ab_in_f: "\<langle>a,b\<rangle> \<in> f" by auto
+    from a_in_dom_f have "Set(a)" ..
+    with assms sb ab_in_f ap_eqI have "f`a = b" by auto
+    with ab_in_f and p_eq show "p \<in> f" by auto
+  next
+    fix p
+    assume pf: "p \<in> f"
+    with assms have "\<exists>Set(x y). p = \<langle>x,y\<rangle>" unfolding Fun_def Rel_def Pair_def by auto
+    then obtain x y where sxy: "Set(x)" "Set(y)" and p_eq: "p = \<langle>x,y\<rangle>" by auto
+    with pf have xy_in_f: "\<langle>x,y\<rangle> \<in> f" by auto
+    with sxy have x_in_domf: "x \<in> dom(f)" unfolding dom_def by auto
+    from xy_in_f sxy assms ap_eqI have "y = f`x" "Set(f`x)" by auto
+    with x_in_domf p_eq LambdaI show "p \<in> (\<lambda>x\<in>dom(f). f ` x)" by auto
+  qed
 
 lemma separation:
   assumes "Set(A)"
