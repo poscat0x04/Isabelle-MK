@@ -45,13 +45,8 @@ lemma classAbsI [intro]: "Set(x) \<Longrightarrow> P(x) \<Longrightarrow> x \<in
 
 lemma classAbsD [dest]:
   assumes "x \<in> {x | P(x)}"
-  shows "Set(x)" "P(x)" proof
-    from assms show "x \<in> {x | P(x)}" .
-    from comprehension have "x \<in> {x | P(x)} \<longleftrightarrow> Set(x) \<and> P(x)" .
-    hence "x \<in> {x | P(x)} \<Longrightarrow> Set(x) \<and> P(x)" ..
-    with assms have "Set(x) \<and> P(x)" by auto
-    thus "P(x)" ..
-  qed
+  shows "Set(x)" "P(x)"
+  using assms unfolding comprehension by blast+
 
 syntax
   "_ClassAbsIn" :: "[pttrn, i, o] \<Rightarrow> i"
@@ -350,12 +345,7 @@ lemma interI [intro]: "x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> x
   unfolding inter_def by blast
 
 lemma interE [elim]: "x \<in> (A \<inter> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
-  unfolding inter_def proof -
-     assume "x \<in> {x | x \<in> A \<and> x \<in> B }"
-     hence "x \<in> A \<and> x \<in> B" ..
-     moreover assume "(x \<in> A \<Longrightarrow> x \<in> B \<Longrightarrow> R)"
-     ultimately show R by blast
-  qed
+  unfolding inter_def by blast
 
 definition union :: "[i, i] \<Rightarrow> i" (infixl \<open>\<union>\<close> 44)
   where
@@ -368,13 +358,7 @@ lemma unionI2 [intro]: "x \<in> B \<Longrightarrow> x \<in> (A \<union> B)"
   unfolding union_def by blast
 
 lemma unionE [elim]: "x \<in> (A \<union> B) \<Longrightarrow> (x \<in> A \<Longrightarrow> R) \<Longrightarrow> (x \<in> B \<Longrightarrow> R) \<Longrightarrow> R"
-  unfolding union_def proof -
-    assume "x \<in> {x | x \<in> A \<or> x \<in> B}"
-    hence "x \<in> A \<or> x \<in> B" ..
-    moreover assume "x \<in> A \<Longrightarrow> R"
-    moreover assume "x \<in> B \<Longrightarrow> R"
-    ultimately show R by blast
-  qed
+  unfolding union_def by blast
 
 definition diff :: "[i, i] \<Rightarrow> i" (infixl \<open>\\<close> 44)
   where
@@ -384,12 +368,7 @@ lemma diffI [intro]: "x \<in> A \<and> x \<notin> B \<Longrightarrow> x \<in> (A
   unfolding diff_def by blast
 
 lemma diffE [elim]: "x \<in> (A \\ B) \<Longrightarrow> (x \<in> A \<Longrightarrow> x \<notin> B \<Longrightarrow> R) \<Longrightarrow> R"
-  unfolding diff_def proof -
-    assume "x \<in> {x | x \<in> A \<and> x \<notin> B}"
-    hence "x \<in> A \<and> x \<notin> B" ..
-    moreover assume "(x \<in> A \<Longrightarrow> x \<notin> B \<Longrightarrow> R)"
-    ultimately show R by blast
-  qed
+  unfolding diff_def by blast
 
 definition Inter :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<open>prefix \<Inter>\<close>\<close>\<Inter>_)\<close> [90] 90)
   where
@@ -399,12 +378,7 @@ lemma InterI [intro]: "Set(x) \<Longrightarrow> (\<And> a. a \<in> A \<Longright
   unfolding Inter_def by blast
 
 lemma InterD [dest]:"x \<in> \<Inter>A \<Longrightarrow> a \<in> A \<Longrightarrow> x \<in> a"
-  unfolding Inter_def proof -
-    assume "x \<in> {x | \<forall>a \<in> A. x \<in> a}"
-    hence "\<forall>a \<in> A. x \<in> a" ..
-    moreover assume "a \<in> A"
-    ultimately show "x \<in> a" ..
-  qed
+  unfolding Inter_def by blast
 
 definition Union :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<open>prefix \<Union>\<close>\<close>\<Union>_)\<close> [90] 90)
   where
@@ -414,12 +388,7 @@ lemma UnionI [intro]: "x \<in> a \<Longrightarrow> a \<in> A \<Longrightarrow> x
   unfolding Union_def by blast
 
 lemma UnionE [elim]: "x \<in> \<Union>A \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R) \<Longrightarrow> R"
-  unfolding Union_def proof -
-    assume "x \<in> {x | \<exists>a \<in> A. x \<in> a}"
-    hence "\<exists>a \<in> A. x \<in> a" ..
-    moreover assume "\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R"
-    ultimately show R by (rule BexistE)
-  qed
+  unfolding Union_def by blast
 
 syntax
   "_UNION" :: "[pttrn, i, i] \<Rightarrow> i"  (\<open>(\<open>indent=3 notation=\<open>binder \<Union>\<in>\<close>\<close>\<Union>_\<in>_./_)\<close> 10)
@@ -484,10 +453,7 @@ lemma powerI [intro]: "Set(y) \<Longrightarrow> y \<subseteq> x \<Longrightarrow
   unfolding power_def by blast
 
 lemma powerD [dest]: "y \<in> \<P>(x) \<Longrightarrow> y \<subseteq> x"
-  unfolding power_def proof -
-    assume "y \<in> {y | y \<subseteq> x}"
-    thus "y \<subseteq> x" ..
-  qed
+  unfolding power_def by blast
 
 definition successor :: "i \<Rightarrow> i" (\<open>S\<close>)
   where
@@ -659,22 +625,7 @@ lemma if_set:
 
 lemma pairing_same_set_eq_singleton [simp]:
   assumes "Set(x)"
-  shows "{x, x} = {x}" proof
-    fix y
-    show "y \<in> {x, x} \<longleftrightarrow> y \<in> {x}" proof
-      assume yx: "y \<in> {x}"
-      hence "y = x" ..
-      hence "y = x \<or> y = x" ..
-      moreover from yx have "Set(y)" ..
-      ultimately show "y \<in> {x, x}" by auto
-    next
-      assume yxx: "y \<in> {x, x}"
-      hence "y = x \<or> y = x" ..
-      hence "y = x" by blast
-      moreover from yxx have "Set(y)" ..
-      ultimately show "y \<in> {x}" by auto
-    qed
-  qed
+  shows "{x, x} = {x}" by blast
 
 lemma union_of_pair [simp]: 
   assumes "Set(a)" "Set(b)"
