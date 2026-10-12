@@ -742,11 +742,11 @@ lemma LambdaI [intro]:
 
 lemma LambdaE [elim]: "p \<in> Lambda(A, f) \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> p = \<langle>x,f(x)\<rangle> \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding Lambda_def proof -
-    assume h: "(\<And>x. x \<in> A \<Longrightarrow> p = \<langle>x,f(x)\<rangle> \<Longrightarrow> R)"
     assume "p \<in> {\<langle>x,f(x)\<rangle> |x. x \<in> A}"
     hence "\<exists>x. x \<in> A \<and> p = \<langle>x,f(x)\<rangle>" ..
     then obtain "x" where "x \<in> A \<and> p = \<langle>x,f(x)\<rangle>" ..
-    with h show R by auto
+    moreover assume "(\<And>x. x \<in> A \<Longrightarrow> p = \<langle>x,f(x)\<rangle> \<Longrightarrow> R)"
+    ultimately show R by auto
   qed
 
 text "Tagged union of a family of sets"
