@@ -1064,4 +1064,28 @@ lemma funext:
     finally show ?thesis .
   qed
 
+definition compose :: "[i, i] \<Rightarrow> i" (infixr \<open>\<circ>\<close> 60)
+  where
+    "P \<circ> R \<equiv> {\<langle>x,z\<rangle> | x y z. \<langle>x,y\<rangle> \<in> R \<and> \<langle>y,z\<rangle> \<in> P}"
+
+definition restriction :: "[i, i] \<Rightarrow> i" (infixl \<open>\<restriction>\<close> 60)
+  where
+    "R \<restriction> A \<equiv> {\<langle>x,y\<rangle> | x y. \<langle>x,y\<rangle> \<in> R \<and> x \<in> A}"
+
+definition inverse :: "i \<Rightarrow> i" ("(_\<inverse>)" [1000] 1000)
+  where
+    "R\<inverse> \<equiv> {\<langle>y,x\<rangle> | x y. \<langle>x,y\<rangle> \<in> R}"
+
+definition fld :: "i \<Rightarrow> i"
+  where
+    "fld(R) \<equiv> dom(R) \<union> rng(R)"
+
+definition image :: "[i, i] \<Rightarrow> i" (infixl \<open>``\<close> 90)
+  where
+    "F `` A \<equiv> {y | \<exists>x \<in> A. \<langle>x,y\<rangle> \<in> F}"
+
+definition inverse_image :: "[i, i] \<Rightarrow> i" (infixl \<open>-``\<close> 90)
+  where
+    "F -`` A \<equiv> {x | \<exists>y \<in> A. \<langle>x,y\<rangle> \<in> F}"
+
 end
