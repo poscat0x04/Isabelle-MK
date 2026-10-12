@@ -411,7 +411,7 @@ definition Union :: "i \<Rightarrow> i" (\<open>(\<open>open_block notation=\<op
   where
     "\<Union>A = {x | \<exists>a \<in> A. x \<in> a}"
 
-lemma UnionI [intro]: "x \<in> a \<and> a \<in> A \<Longrightarrow> x \<in> \<Union>A"
+lemma UnionI [intro]: "x \<in> a \<Longrightarrow> a \<in> A \<Longrightarrow> x \<in> \<Union>A"
   unfolding Union_def by blast
 
 lemma UnionE [elim]: "x \<in> \<Union>A \<Longrightarrow> (\<And>a. a \<in> A \<Longrightarrow> x \<in> a \<Longrightarrow> R) \<Longrightarrow> R"
@@ -869,7 +869,7 @@ lemma Lambda_fun:
     with yeq show "y = z" by auto
   qed
 
-lemma Lambda_dom:
+lemma Lambda_dom [simp]:
   assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
   shows "dom(Lambda(A,f)) = A" unfolding dom_def proof (intro eqI iffI)
     fix x
@@ -890,10 +890,32 @@ lemma Lambda_dom:
     with xa' show "x \<in> A" by auto
   qed
 
-lemma Lambda_ap:
-  assumes "a \<in> A" "Set(f(a))"
-  shows "Lambda(A,f)`a = f(a)" proof
+lemma Lambda_ap [simp]:
+  assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))" "a \<in> A"
+  shows "Lambda(A,f)`a = f(a)" unfolding ap_def proof (intro eqI iffI)
+    fix x
+    assume "x \<in> \<Union>{y | \<langle>a,y\<rangle> \<in> Lambda(A, f)}"
+    then obtain y where xy: "x \<in> y" and "y \<in> {y | \<langle>a,y\<rangle> \<in> Lambda(A,f)}" ..
+    hence "Set(x)" and sy: "Set(y)" and "\<langle>a,y\<rangle> \<in> Lambda(A,f)" by auto
+    then obtain a' where a'_in_A: "a' \<in> A" and eq: "\<langle>a,y\<rangle> = \<langle>a',f(a')\<rangle>" by auto
+    hence sa': "Set(a')" by auto
+    with assms a'_in_A have "Set(a)" and "Set(f(a'))" by auto
+    with sy sa' eq pair_inject have "a = a'" and "y = f(a')" by auto
+    hence "y = f(a)" by auto
+    with xy show "x \<in> f(a)" by auto
+  next
+    fix x
+    assume x_in_fa: "x \<in> f(a)"
+    from assms have "Set(f(a))" by auto
+    moreover with assms have "\<langle>a,f(a)\<rangle> \<in> Lambda(A,f)" by auto
+    ultimately have "f(a) \<in> {y | \<langle>a,y\<rangle> \<in> Lambda(A,f)}" by auto
+    with x_in_fa show "x \<in> \<Union>{y | \<langle>a,y\<rangle> \<in> Lambda(A, f)}" by auto
   qed
+
+lemma Lambda_eta [simp]:
+   assumes "Fun(f)"
+   shows "Lambda(dom(f), \<lambda>x. f`x) = f" proof (intro eqI iffI)
+   qed
 
 lemma separation:
   assumes "Set(A)"
