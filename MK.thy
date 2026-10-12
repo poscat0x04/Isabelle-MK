@@ -47,7 +47,6 @@ lemma classAbsE [elim]:
   assumes "x \<in> {x | P(x)}"
   shows "Set(x)" "P(x)" proof
     from assms show "x \<in> {x | P(x)}" .
-  next
     from comprehension have "x \<in> {x | P(x)} \<longleftrightarrow> Set(x) \<and> P(x)" .
     hence "x \<in> {x | P(x)} \<Longrightarrow> Set(x) \<and> P(x)" ..
     with assms have "Set(x) \<and> P(x)" by auto
@@ -533,6 +532,12 @@ lemma PairE [elim]: "Pair(p) \<Longrightarrow> (\<And>a b. Set(a) \<Longrightarr
 definition Rel :: "i \<Rightarrow> o"
   where
     "Rel(R) \<equiv> \<forall>p. p \<in> R \<longrightarrow> Pair(p)"
+
+lemma RelE:
+  assumes "Rel(R)" "p \<in> R"
+  obtains x y where
+    "Set(x)" "Set(y)" "p = \<langle>x,y\<rangle>"
+  using assms unfolding Rel_def Pair_def by auto
 
 definition Fun :: "i \<Rightarrow> o"
   where
@@ -1029,6 +1034,42 @@ lemma separation:
       qed
     qed
     with range_union_set show ?thesis by simp
+  qed
+
+lemma union_set:
+  assumes "Set(a)" "Set(b)"
+  shows "Set(a \<union> b)" proof -
+    from assms have "Set({a, b})" by (rule pairing)
+    hence "Set(\<Union>{a, b})" by (rule union)
+    moreover have "\<Union>{a, b} = (a \<union> b)" proof (intro eqI iffI)
+      fix x
+      assume "x \<in> \<Union>{a, b}"
+      then obtain y where xy: "x \<in> y" and y: "y \<in> {a, b}" by auto
+      from y have "y = a \<or> y = b" by (rule classAbsE)
+      then show "x \<in> (a \<union> b)" proof
+        assume "y = a"
+        with xy have "x \<in> a" by auto
+        thus ?thesis by auto
+      next
+        assume "y = b"
+        with xy have "x \<in> b" by auto
+        thus ?thesis by auto
+      qed
+    next
+      fix x
+      assume "x \<in> (a \<union> b)"
+      hence "x \<in> a \<or> x \<in> b" by auto
+      then show "x \<in> \<Union>{a, b}" proof
+        assume "x \<in> a"
+        moreover from assms have "a \<in> {a, b}" by auto
+        ultimately show ?thesis by auto
+      next
+        assume "x \<in> b"
+        moreover from assms have "b \<in> {a, b}" by auto
+        ultimately show ?thesis by auto
+      qed
+    qed
+    ultimately show ?thesis by auto
   qed
 
 end
