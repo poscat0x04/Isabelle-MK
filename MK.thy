@@ -698,11 +698,8 @@ lemma fst_pair [simp]:
       hence "a = x" ..
       with zx show "z \<in> a" by auto
     next
-      assume za: "z \<in> a"
-      have "\<langle>a,b\<rangle> = \<langle>a,b\<rangle>" by auto
-      with assms have "\<exists>Set(y). \<langle>a,b\<rangle> = \<langle>a,y\<rangle>" by auto
-      with assms have "a \<in> {x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
-      with za show "z \<in> \<Union>{x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
+      assume "z \<in> a"
+      with assms show "z \<in> \<Union>{x | \<exists>Set(y). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by blast
     qed
   qed
 
@@ -719,11 +716,8 @@ lemma snd_pair [simp]:
       hence "b = y" ..
       with zy show "z \<in> b" by auto
     next
-      assume zb: "z \<in> b"
-      have "\<langle>a,b\<rangle> = \<langle>a,b\<rangle>" by auto
-      with assms have "\<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,b\<rangle>" by auto
-      with assms have "b \<in> {y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
-      with zb show "z \<in> \<Union>{y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by auto
+      assume "z \<in> b"
+      with assms show "z \<in> \<Union>{y | \<exists>Set(x). \<langle>a,b\<rangle> = \<langle>x,y\<rangle>}" by blast
     qed
   qed
 
@@ -735,12 +729,9 @@ lemma LambdaI [intro]:
   assumes "x \<in> A" "Set(f(x))"
   shows "\<langle>x,f(x)\<rangle> \<in> Lambda(A, f)"
   unfolding Lambda_def proof
-    from assms(1) have "Set(x)" ..
-    from this assms(2) show "Set(\<langle>x,f(x)\<rangle>)" by (rule pair_set)
+    from assms show "Set(\<langle>x,f(x)\<rangle>)" by (blast intro: pair_set)
   next
-    have "\<langle>x,f(x)\<rangle> = \<langle>x,f(x)\<rangle>" ..
-    with assms(1) have "x \<in> A \<and> \<langle>x,f(x)\<rangle> = \<langle>x,f(x)\<rangle>" ..
-    thus "\<exists>xa. xa \<in> A \<and> \<langle>x,f(x)\<rangle> = \<langle>xa,f(xa)\<rangle>" by auto
+    from assms(1) show "\<exists>xa. xa \<in> A \<and> \<langle>x,f(x)\<rangle> = \<langle>xa,f(xa)\<rangle>" by blast
   qed
 
 lemma LambdaE [elim]: "p \<in> Lambda(A, f) \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> p = \<langle>x,f(x)\<rangle> \<Longrightarrow> R) \<Longrightarrow> R"
@@ -883,8 +874,7 @@ lemma ap_welldefined:
     next
       fix a
       assume "a \<in> y"
-      moreover from sy xy_in_f have "y \<in> {y | \<langle>x,y\<rangle> \<in> f}" by auto
-      ultimately show "a \<in> \<Union>{y | \<langle>x,y\<rangle> \<in> f}" by auto
+      with sy xy_in_f show "a \<in> \<Union>{y | \<langle>x,y\<rangle> \<in> f}" by blast
     qed
     ultimately show "\<langle>x,f`x\<rangle> \<in> f" by auto
     from f_ap_x sy show "Set(f`x)" by auto
@@ -928,9 +918,8 @@ lemma separation:
     have set_img: "\<And>a. a \<in> A \<Longrightarrow> Set(if P(a) then {a} else {})" proof -
       fix a
       assume "a \<in> A"
-      hence "Set(a)" ..
-      hence "Set({a})" by (rule singleton_set)
-      with empty_set if_set show "Set(if P(a) then {a} else {})" by auto
+      with empty_set show "Set(if P(a) then {a} else {})"
+        by (blast intro: singleton_set if_set)
     qed
     hence fun_f: "Fun(?f)" by (rule Lambda_fun)
     with set_img assms Lambda_dom have "Set(dom(?f))" by auto
@@ -982,28 +971,12 @@ lemma union_of_upair:
     assume "x \<in> \<Union>{a, b}"
     then obtain y where xy: "x \<in> y" and y: "y \<in> {a, b}" by auto
     from y have "y = a \<or> y = b" by blast
-    then show "x \<in> (a \<union> b)" proof
-      assume "y = a"
-      with xy have "x \<in> a" by auto
-      thus ?thesis by auto
-    next
-      assume "y = b"
-      with xy have "x \<in> b" by auto
-      thus ?thesis by auto
-    qed
+    with xy show "x \<in> (a \<union> b)" by blast
   next
     fix x
     assume "x \<in> (a \<union> b)"
     hence "x \<in> a \<or> x \<in> b" by auto
-    then show "x \<in> \<Union>{a, b}" proof
-      assume "x \<in> a"
-      moreover from assms have "a \<in> {a, b}" by auto
-      ultimately show ?thesis by auto
-    next
-      assume "x \<in> b"
-      moreover from assms have "b \<in> {a, b}" by auto
-      ultimately show ?thesis by auto
-    qed
+    with assms show "x \<in> \<Union>{a, b}" by blast
   qed
 
 lemma union_set:
