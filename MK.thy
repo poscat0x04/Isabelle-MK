@@ -788,7 +788,21 @@ text "Product of a family of sets"
 
 definition Pi :: "[i, i \<Rightarrow> i] \<Rightarrow> i"
   where
-    "Pi(I,F) \<equiv> {f | f \<in> (I \<rightarrow> (\<Union>i \<in> I. F(i))) \<and> (\<forall>i \<in> I. f`i \<in> F(i))}"
+    "Pi(I,F) \<equiv> {f \<in> I \<rightarrow> (\<Union>i \<in> I. F(i)) | \<forall>i \<in> I. f`i \<in> F(i)}"
+
+syntax
+  "_PROD" :: "[pttrn, i, i] \<Rightarrow> i" (\<open>(\<open>indent=3 notation=\<open>mixfix \<Prod>\<in>\<close>\<close>\<Prod>_\<in>_./ _)\<close> 10)
+  "_SUM"  :: "[pttrn, i, i] \<Rightarrow> i" (\<open>(\<open>indent=3 notation=\<open>mixfix \<Sum>\<in>\<close>\<close>\<Sum>_\<in>_./ _)\<close> 10)
+  "_lam"  :: "[pttrn, i, i] \<Rightarrow> i" (\<open>(\<open>indent=3 notation=\<open>mixfix \<lambda>\<in>\<close>\<close>\<lambda>_\<in>_./ _)\<close> 10)
+syntax_consts
+  "_PROD" == Pi and
+  "_SUM" == Sigma and
+  "_lam" == Lambda
+translations
+  "\<Prod>x\<in>A. B"   == "CONST Pi(A, \<lambda>x. B)"
+  "\<Sum>x\<in>A. B"   == "CONST Sigma(A, \<lambda>x. B)"
+  "\<lambda>x\<in>A. f"    == "CONST Lambda(A, \<lambda>x. f)"
+
 
 lemma Lambda_mem:
   assumes "x \<in> A"
