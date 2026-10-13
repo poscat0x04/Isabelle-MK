@@ -485,13 +485,7 @@ definition Pair :: "i \<Rightarrow> o"
 
 lemma PairI [intro]:
   assumes "Set(a)" "Set(b)" "p = \<langle>a,b\<rangle>"
-  shows "Pair(p)" unfolding Pair_def proof (intro exI conjI)
-    from assms(1) show "Set(a)" .
-  next
-    from assms(2) show "Set(b)" .
-  next
-    from assms(3) show "p = \<langle>a,b\<rangle>" .
-  qed
+  shows "Pair(p)" using assms unfolding Pair_def by blast
 
 lemma PairE [elim]: "Pair(p) \<Longrightarrow> (\<And>a b. Set(a) \<Longrightarrow> Set(b) \<Longrightarrow> p = \<langle>a,b\<rangle> \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding Pair_def proof -
@@ -514,6 +508,21 @@ lemma RelE:
 definition Fun :: "i \<Rightarrow> o"
   where
     "Fun(F) \<equiv> Rel(F) \<and> (\<forall>Set(x y z). \<langle>x,y\<rangle> \<in> F \<and> \<langle>x,z\<rangle> \<in> F \<longrightarrow> y = z)"
+
+lemma FunI [intro]: 
+  assumes "Rel(F)"
+  and "\<And>x y z. \<lbrakk>Set(x); Set(y); Set(z); \<langle>x,y\<rangle> \<in> F; \<langle>x,z\<rangle> \<in> F\<rbrakk> \<Longrightarrow> y = z"
+  shows "Fun(F)"
+  using assms unfolding Fun_def by auto
+
+lemma FunD1 [dest]: "Fun(F) \<Longrightarrow> Rel(F)"
+  unfolding Fun_def by auto
+
+lemma FunD2 [dest]:
+  assumes "Fun(F)" "Set(x)" "Set(y)" "Set(z)"
+  and "\<langle>x,y\<rangle> \<in> F" "\<langle>x,z\<rangle> \<in> F"
+  shows "y = z"
+  using assms unfolding Fun_def by auto
 
 definition dom :: "i \<Rightarrow> i"
   where
@@ -547,7 +556,7 @@ lemma rngE [elim]: "y \<in> rng(R) \<Longrightarrow> (\<And>x. Set(x) \<Longrigh
     ultimately show P by auto
   qed
 
-definition ap :: "[i, i] \<Rightarrow> i" (infixl \<open>`\<close> 90)
+definition ap :: "[i, i] \<Rightarrow> i" (infixr \<open>`\<close> 90)
   where
     "f`x \<equiv> \<Union>{y | \<langle>x,y\<rangle> \<in> f}"
 
@@ -1154,6 +1163,6 @@ definition Trans :: "i \<Rightarrow> o"
 
 definition Ord :: "i \<Rightarrow> o"
   where
-    "Ord(O) \<equiv> Trans(O) \<and> (\<forall>o \<in> O. Trans(o))"
+    "Ord(O) \<equiv> Set(O) \<and> Trans(O) \<and> (\<forall>o \<in> O. Trans(o))"
 
 end
