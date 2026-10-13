@@ -1136,4 +1136,24 @@ lemma compose_assoc: "P \<circ> (Q \<circ> R) = (P \<circ> Q) \<circ> R" proof (
       using sxyz sxyz' y'z pp by auto
   qed
 
+definition id :: "i"
+  where
+    "id \<equiv> \<lambda>x \<in> \<bbbV>. x"
+
+lemma id_ap_x_eq_x:
+  assumes "Set(x)"
+  shows "id`x = x" unfolding id_def proof (rule Lambda_ap)
+    from assms show "x \<in> \<bbbV>" by blast
+  next
+    show "\<And>x. x \<in> \<bbbV> \<Longrightarrow> Set(x)" by blast
+  qed
+
+definition Trans :: "i \<Rightarrow> o"
+  where
+    "Trans(A) \<equiv> \<forall>x \<in> A. x \<subseteq> A"
+
+definition Ord :: "i \<Rightarrow> o"
+  where
+    "Ord(O) \<equiv> Trans(O) \<and> (\<forall>o \<in> O. Trans(o))"
+
 end
