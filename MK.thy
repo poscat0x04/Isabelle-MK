@@ -649,7 +649,6 @@ lemma domI [intro]: "Set(x) \<Longrightarrow> Set(y) \<Longrightarrow> \<langle>
   unfolding dom_def by auto
 
 lemma domE [elim]: "x \<in> dom(R) \<Longrightarrow> (\<And>y. Set(y) \<Longrightarrow> \<langle>x,y\<rangle> \<in> R \<Longrightarrow> P) \<Longrightarrow> P"
-
   unfolding dom_def by blast
 
 definition rng :: "i \<Rightarrow> i"
@@ -812,18 +811,18 @@ lemma snd_pair [simp]:
 
 definition Lambda :: "[i, i \<Rightarrow> i] \<Rightarrow> i"
   where
-    "Lambda(A, f) \<equiv> {\<langle>x,f(x)\<rangle> | x. x \<in> A}"
+    "Lambda(A, f) \<equiv> {\<langle>x,f(x)\<rangle> | x. x \<in> A \<and> Set(f(x))}"
 
 lemma LambdaI [intro]:
   assumes "x \<in> A" "Set(f(x))"
   shows "\<langle>x,f(x)\<rangle> \<in> Lambda(A, f)"
   using assms unfolding Lambda_def by blast
 
-lemma LambdaE [elim]: "p \<in> Lambda(A, f) \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> p = \<langle>x,f(x)\<rangle> \<Longrightarrow> R) \<Longrightarrow> R"
+lemma LambdaE [elim]: "p \<in> Lambda(A, f) \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> Set(f(x)) \<Longrightarrow> p = \<langle>x,f(x)\<rangle> \<Longrightarrow> R) \<Longrightarrow> R"
   unfolding Lambda_def by blast
 
 lemma Lambda_pair_iff [simp]:
-  assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))" "Set(a)" "Set(b)"
+  assumes "Set(a)" "Set(b)"
   shows "\<langle>a,b\<rangle> \<in> Lambda(A,f) \<longleftrightarrow> a \<in> A \<and> b = f(a)"
   using assms by (auto simp: Lambda_def comprehension)
 
@@ -871,15 +870,11 @@ lemma Lambda_mem:
   shows "\<langle>x,f(x)\<rangle> \<in> Lambda(A,f)"
   using assms by auto
 
-lemma Lambda_rel [intro]:
-  assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
-  shows "Rel(Lambda(A,f))"
-  by (rule RelI; use assms in \<open>auto elim!: LambdaE\<close>)
+lemma Lambda_rel [intro]: "Rel(Lambda(A,f))"
+  by (rule RelI; auto elim!: LambdaE)
 
-lemma Lambda_fun [intro]:
-  assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
-  shows "Fun(Lambda(A,f))"
-  by (rule FunI; use assms in \<open>auto intro: Lambda_rel\<close>)
+lemma Lambda_fun [intro]: "Fun(Lambda(A,f))"
+  by (rule FunI; auto)
 
 lemma Lambda_dom [simp]:
   assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
@@ -887,7 +882,7 @@ lemma Lambda_dom [simp]:
   by (rule eqI; use assms in \<open>auto simp: dom_def comprehension\<close>)
 
 lemma Lambda_ap [simp]:
-  assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))" "a \<in> A"
+  assumes "a \<in> A" "Set(f(a))"
   shows "Lambda(A,f)`a = f(a)"
   by (rule eqI; use assms in \<open>auto simp: ap_def comprehension\<close>)
 
@@ -934,16 +929,15 @@ lemma Lambda_eta [simp]:
   by (rule Rel_eqI; use assms in auto)
 
 lemma Lambda_rng_iff [simp]:
-  assumes "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
-  shows "y \<in> rng(Lambda(A,f)) \<longleftrightarrow> (\<exists>x \<in> A. y = f(x))"
-  using assms by (auto simp: rng_def comprehension)
+  "y \<in> rng(Lambda(A,f)) \<longleftrightarrow> (\<exists>x \<in> A. Set(f(x)) \<and> y = f(x))"
+  by (auto simp: rng_def comprehension)
 
 lemma separation [intro, simp]:
   assumes "Set(A)"
   shows "Set({x \<in> A | P(x)})"
 proof -
   let ?f = "\<lambda>a \<in> A. if P(a) then {a} else {}"
-  have "Fun(?f)" by (rule Lambda_fun) simp
+  have "Fun(?f)" by (rule Lambda_fun)
   moreover have "Set(dom(?f))" using assms by simp
   ultimately have "Set(rng(?f))" by (rule replacement)
   then have "Set(\<Union>rng(?f))" by simp
@@ -998,7 +992,6 @@ lemma simp_pclass_singleton [simp]:
 
 lemma Lambda_cong:
   assumes "\<And>x. x \<in> A \<Longrightarrow> f(x) = g(x)"
-  and "\<And>x. x \<in> A \<Longrightarrow> Set(f(x))"
   shows "Lambda(A,f) = Lambda(A,g)"
   by (rule eqI; use assms in \<open>auto elim!: LambdaE\<close>)
 
